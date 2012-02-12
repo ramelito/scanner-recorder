@@ -20,12 +20,24 @@ s0_rec=$(echo $scanner0 | awk -F";" '{print $4}')
 s0_ihost=$(echo $scanner0 | awk -F";" '{print $5}')
 s0_ipass=$(echo $scanner0 | awk -F";" '{print $6}')
 s0_imount=$(echo $scanner0 | awk -F";" '{print $7}')
-s0_bitrate=$(echo $scanner0 | awk -F";" '{print $8}')
-s0_samplerate=$(echo $scanner0 | awk -F";" '{print $9}')
+s0_profile=$(echo $scanner0 | awk -F";" '{print $8}')
 
 test "X$s0_rec" == "X" && s0_rec=0
-test $s0_samplerate -eq 16000 || s0_samplerate=16000
-test $s0_bitrate -eq 48 || s0_bitrate=48
+
+case "$s0_profile" in
+        lq)
+                s0_samplerate=8000; s0_bitrate=16
+                ;;
+        mq)
+                s0_samplerate=11025; s0_bitrate=24
+                ;;
+        hq)
+                s0_samplerate=16000; s0_bitrate=48
+                ;;
+	*)
+                s0_samplerate=8000; s0_bitrate=16
+		;;	
+esac
 
 if [ $s0_type -eq 0 ]; then
 	echo "Scanner is UNcontrolled."
