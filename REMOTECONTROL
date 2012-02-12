@@ -8,11 +8,10 @@ longopts="gid,key:,qsh,qsc:,csc:,pwr,sts,glg,jmp,jnt:,mnu"
 
 gid=0; key=0; qsh=0; qsc=0; csc=0; pwr=0; sts=0; glg=0; jmp=0; jnt=0; mnu=0
 
-temp=`getopt -o $shortopts --long $longopts -n 'REMOTECONTROL' -- "$@"`
+temp=$(getopt -o $shortopts --long $longopts -n 'REMOTECONTROL' -- "$@")
 
 [ $? != 0 ] || { echo "Terminating..." >&2 ; exit 1 }
 
-# Note the quotes around `$TEMP': they are essential!
 eval set -- "$temp"
 
 while true ; do
@@ -46,7 +45,7 @@ readscanner="readscanner -d /dev/scanners/$scannerindex -s 50000"
 
 [ $qsc -eq 1 ] && { echo $($readscanner -c QSC,$qsc_opts); exit 0 }
 
-[ $CSC -eq 1 ] && { echo $($readscanner -c CSC,$CSC_OPTS); exit 0 }
+[ $csc -eq 1 ] && { echo $($readscanner -c CSC,$csc_opts); exit 0 }
 
 [ $PWR -eq 1 ] && { echo $($readscanner -c PWR); exit 0 }
 
@@ -54,6 +53,6 @@ readscanner="readscanner -d /dev/scanners/$scannerindex -s 50000"
 
 [ $GLG -eq 1 ] && { echo $($readscanner -c GLG); exit 0 }
 
-[ $JMP -eq 1 ] && { echo $($readscanner -c JMP,$JMP_OPTS); exit 0 }
+[ $jmp -eq 1 ] && { echo $($readscanner -c JMP,$jmp_opts); exit 0 }
 
-[ $MNU -eq 1 ] && { echo $($readscanner -c MNU,$MNU_OPTS); exit 0 }
+[ $mnu -eq 1 ] && { echo $($readscanner -c MNU,$mnu_opts); exit 0 }
