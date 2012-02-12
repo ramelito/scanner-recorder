@@ -5,6 +5,7 @@ scannerlog=$1
 prevline=""
 line=""
 comma=".*,$"
+mhz=".*MHz.*"
 correction="-0.5"
 fname=${scannerlog##*/}
 fname2=${fname%.*}
@@ -37,7 +38,7 @@ do
 		filename="${filename_date_part}_${freq}.mp3"
 	        dir1="${scannerhome}/${yymmdd}/${system}/${group}/${channel}/${hh}"
 		test "X$group" == "X" && dir1="${scannerhome}/${yymmdd}/${system}/${freq}/${hh}"
-		[[ $freq =~ .*MHz.* ]] || dir1="${scannerhome}/${yymmdd}/${system}/${freq}/${hh}"
+		[[ "$freq" =~ $mhz ]] || dir1="${scannerhome}/${yymmdd}/${system}/${freq}/${hh}"
                 test -d $dir1 || mkdir -p $dir1
 		test $ti -gt 2 && ffmpeg -y -ss $ss -t $t -i $record_file -acodec copy "${dir1}/${filename}" 2>/dev/null
 		test $ti -gt 2 && echo "Splitting ${filename_date_part}_${freq}.mp3 from $record_file to ${dir1}, position $ss, duration $t.">> /tmp/split.log
