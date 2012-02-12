@@ -1,0 +1,83 @@
+#!/bin/bash
+
+PATH=/opt/bin:$PATH
+export PATH
+
+SHORTOPTS="s:"
+LONGOPTS="gid,key:,qsh,qsc:,csc:,pwr,sts,glg,jmp,jnt:,mnu"
+
+GID=0; KEY=0; QSH=0; QSC=0; CSC=0; PWR=0; STS=0; GLG=0; JMP=0; JNT=0; MNU=0
+
+ARCH=$(uname -m)
+
+TEMP=`getopt -o $SHORTOPTS --long $LONGOPTS -n 'REMOTECONTROL' -- "$@"`
+
+if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
+
+# Note the quotes around `$TEMP': they are essential!
+eval set -- "$TEMP"
+
+while true ; do
+        case "$1" in
+                -s) scannerindex=$2 ; shift 2 ;;
+                --gid) GID=1; shift ;;
+                --key) KEY=1; KEY_OPTS=$2; shift 2 ;;
+                --qsh) QSH=1; QSH_OPTS=$2; shift 2 ;;
+                --qsc) QSC=1; QSC_OPTS=$2; shift 2 ;;
+                --csc) CSC=1; CSC_OPTS=$2; shift 2 ;;
+                --pwr) PWR=1; shift ;;
+                --sts) STS=1; shift ;;
+                --glg) GLG=1; shift ;;
+                --jmp) JMP=1; JMP_OPTS=$2; shift 2 ;;
+                --jnt) JNT=1; JNT_OPTS=$2; shift 2 ;;
+                --mnu) MNU=1; MNU_OPTS=$2; shift 2 ;;
+                --) shift ; break ;;
+                *) echo "Internal error!" ; exit 1 ;;
+        esac
+done
+
+if [ "X$scannerindex" == "X" ];then
+	exit 1
+fi
+
+readscanner="readscanner_$ARCH -d /dev/scanners/$scannerindex -s 50000"
+
+if [ $GID -eq 1 ]; then
+	echo `$readscanner -c GID`
+fi
+
+if [ $KEY -eq 1 ]; then
+	echo `$readscanner -c KEY,$KEY_OPTS`
+fi
+
+if [ $QSH -eq 1 ]; then
+	echo `$readscanner -c QSH,$QSH_OPTS`
+fi
+
+if [ $QSC -eq 1 ]; then
+	echo `$readscanner -c QSC,$QSC_OPTS`
+fi
+
+if [ $CSC -eq 1 ]; then
+	echo `$readscanner -c CSC,$CSC_OPTS`
+fi
+
+if [ $PWR -eq 1 ]; then
+	echo `$readscanner -c PWR`
+fi
+
+if [ $STS -eq 1 ]; then
+	echo `$readscanner -c STS`
+fi
+
+if [ $GLG -eq 1 ]; then
+	echo `$readscanner -c GLG`
+fi
+
+if [ $JMP -eq 1 ]; then
+	echo `$readscanner -c JMP,$JMP_OPTS`
+fi
+
+if [ $MNU -eq 1 ]; then
+	echo `$readscanner -c MNU,$MNU_OPTS`
+fi
