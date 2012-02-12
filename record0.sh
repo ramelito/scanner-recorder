@@ -3,11 +3,15 @@
 export LANG=C
 export PATH=/opt/bin:$PATH
 
-date
-
 test -f /scanner_audio/record.cfg && cp /scanner_audio/record.cfg /opt/etc/record.cfg
 test -f /opt/etc/record.cfg && source /opt/etc/record.cfg
 test -f /opt/etc/record.cfg || exit 1
+
+type -P arecord &>/dev/null || { echo "No arecord utility is installed. Install alsa-utils."; exit 1 }
+type -P lame &>/dev/null || { echo "No lame utility is installed. Install lame."; exit 1 }
+type -P darkice &>/dev/null || { echo "No darkice utility is installed. Install darkice."; exit 1 }
+type -P mp3splt &>/dev/null || { echo "No mp3splt utility is installed. Install mp3splt."; exit 1 }
+type -P ffmpeg &>/dev/null || { echo "No ffmpeg utility is installed. Install ffmpeg."; exit 1 }
 
 s0_type=$(echo $scanner0 | awk -F";" '{print $1}')
 s0_port=$(echo $scanner0 | awk -F";" '{print $2}')
