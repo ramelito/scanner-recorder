@@ -62,7 +62,7 @@ do
 		fi
 	
 		if [ $inuse -eq 1 ]; then	
-			line=$(REMOTECONTROL2 -s $scannerindex --glg | sed -e 's///g' | grep -v ERR | grep GLG)
+			line=$(REMOTECONTROL -s $scannerindex --glg | sed -e 's///g' | grep -v ERR | grep GLG)
 		fi
 
 		sql=$(echo $line | awk -F, '{print $9}')
