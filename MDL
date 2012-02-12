@@ -1,0 +1,28 @@
+#!/bin/bash
+
+export PATH=/opt/bin:$PATH
+
+scannerindex=0
+arch=$(uname -m)
+
+args=`getopt s: $*`
+if test $? != 0
+     then
+         echo 'Usage: -s <scanner-index>'
+         exit 1
+fi
+set -- $args
+for i
+do
+  case "$i" in
+        -s) shift;scannerindex=$1;shift;;
+        -a) shift;arch=$1;shift;
+  esac
+done
+
+readscanner="readscanner_$arch -d /dev/scanners/$scannerindex"
+scannerlck="/tmp/scanner$scannerindex.lck"
+
+res=`$readscanner -c MDL -s 50000 | sed -e 's///'`
+
+echo $res
