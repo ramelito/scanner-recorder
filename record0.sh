@@ -6,8 +6,8 @@ export PATH=/opt/bin:$PATH
 res=""
 mdl="^MDL*"
 
-test -f /scanner_audio/record.cfg && cp /scanner_audio/record.cfg /opt/etc/record.cfg
-test -f /opt/etc/record.cfg && source /opt/etc/record.cfg || ( echo "File record.cfg not found in /opt/etc."; exit 1 )
+test -f /scanner_audio/record.conf && cp /scanner_audio/record.conf /opt/etc/
+test -f /opt/etc/record.conf && source /opt/etc/record.conf || ( echo "File record.conf not found in /opt/etc."; exit 1 )
 
 type -P arecord &>/dev/null || ( echo "No arecord utility is installed. Install alsa-utils."; exit 1 )
 type -P lame &>/dev/null || ( echo "No lame utility is installed. Install lame."; exit 1 )
