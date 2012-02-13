@@ -25,7 +25,7 @@ s0_profile=$(echo $scanner0 | awk -F";" '{print $8}')
 
 test "X$s0_rec" == "X" && s0_rec=0
 test "X$s0_scard" == "X" && s0_card=0
-[ $(arecord -l | grep "card $s0_scard:" | wc -l) -eq 1 ] || { echo "Card $s0_scard does not exist."; exit 1 }
+[ $(arecord -l | grep "card $s0_scard:" | wc -l) -eq 1 ] || ( echo "Card $s0_scard does not exist."; exit 1 )
 
 case "$s0_profile" in
         lq)
@@ -51,18 +51,18 @@ if [ $s0_type -eq 0 ]; then
 	if [ $s0_rec -eq 1 ]; then
 		echo "Simple recording and livecast."
 
-		test "X$s0_ihost" == "X" && { echo "Icecast server host not defined. Aborting."; exit 1 }
-		test "X$s0_ipass" == "X" && { echo "Icecast password not defined. Aborting."; exit 1 }
-		test "X$s0_imount" == "X" && { echo "Icecast mount not defined. Aborting."; exit 1 }
+		test "X$s0_ihost" == "X" && ( echo "Icecast server host not defined. Aborting."; exit 1 )
+		test "X$s0_ipass" == "X" && ( echo "Icecast password not defined. Aborting."; exit 1 )
+		test "X$s0_imount" == "X" && ( echo "Icecast mount not defined. Aborting."; exit 1 )
 
 		watchdog1.sh $s0_scard $s0_bitrate $s0_samplerate $s0_ihost $s0_ipass $s0_imount 1>/tmp/watchdog1.log &
 	fi
 	if [ $s0_rec -eq 2 ]; then
 		echo "Livecast only."
 
-		test "X$s0_ihost" == "X" && { echo "Icecast server host not defined. Aborting."; exit 1 }
-		test "X$s0_ipass" == "X" && { echo "Icecast password not defined. Aborting."; exit 1 }
-		test "X$s0_imount" == "X" && { echo "Icecast mount not defined. Aborting."; exit 1 }
+		test "X$s0_ihost" == "X" && ( echo "Icecast server host not defined. Aborting."; exit 1 )
+		test "X$s0_ipass" == "X" && ( echo "Icecast password not defined. Aborting."; exit 1 )
+		test "X$s0_imount" == "X" && ( echo "Icecast mount not defined. Aborting."; exit 1 )
 
 		watchdog2.sh $s0_scard $s0_bitrate $s0_samplerate $s0_ihost $s0_ipass $s0_imount 1>/tmp/watchdog2.log &
 	fi
@@ -87,9 +87,9 @@ if [ $s0_type -eq 1 ]; then
 	if [ $s0_rec -eq 1 ]; then
 		echo "Recording for Uniden scanner and livecast."
 
-		test "X$s0_ihost" == "X" && { echo "Icecast server host not defined. Aborting."; exit 1 }
-		test "X$s0_ipass" == "X" && { echo "Icecast password not defined. Aborting."; exit 1 }
-		test "X$s0_imount" == "X" && { echo "Icecast mount not defined. Aborting."; exit 1 }
+		test "X$s0_ihost" == "X" && ( echo "Icecast server host not defined. Aborting."; exit 1 )
+		test "X$s0_ipass" == "X" && ( echo "Icecast password not defined. Aborting."; exit 1 )
+		test "X$s0_imount" == "X" && ( echo "Icecast mount not defined. Aborting."; exit 1 )
 
 		watchdog_uniden1.sh $s0_port $s0_scard $s0_bitrate $s0_samplerate $s0_ihost $s0_ipass $s0_imount 1>/tmp/watchdog_uniden1.log &
 	fi
