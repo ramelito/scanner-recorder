@@ -61,3 +61,7 @@ sudo ln -s /etc/init.d/record0.sh /etc/rc3.d/S99record0.sh
 sudo ln -s /etc/init.d/record0.sh /etc/rc4.d/S99record0.sh
 sudo ln -s /etc/init.d/record0.sh /etc/rc5.d/S99record0.sh
 echo "ok!"
+
+echo -n "Installing udev rules... "
+test -f 99-usb-serial.rules && sudo cp 99-usb-serial.rules /etc/udev/rules.d/
+echo "ok!"
