@@ -13,7 +13,7 @@ scannerhome="/scanner_audio"
 arecordpidfile="/tmp/arecord${scannerindex}.pid"
 audiodevice="-Dplughw:${scannerindex},0"
 arecordopts="-f S16_LE -r $samplerate -c 1 -t wav -q"
-lameopts="-S -m m -s 16 -b $bitrate"
+lameopts="-S -m m -q9 -b $bitrate"
 darkconf="/tmp/darkice${scannerindex}.conf"
 darkpidfile="/tmp/darkice${scannerindex}.pid"
 
