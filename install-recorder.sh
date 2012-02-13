@@ -56,4 +56,8 @@ echo "ok!"
 
 echo -n "Installing record0.sh... "
 test -f record0.sh && sudo cp record0.sh /etc/init.d
+sudo ln -s /etc/init.d/record0.sh /etc/rc2.d/S99record0.sh
+sudo ln -s /etc/init.d/record0.sh /etc/rc3.d/S99record0.sh
+sudo ln -s /etc/init.d/record0.sh /etc/rc4.d/S99record0.sh
+sudo ln -s /etc/init.d/record0.sh /etc/rc5.d/S99record0.sh
 echo "ok!"
