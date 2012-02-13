@@ -53,3 +53,7 @@ echo "ok!"
 echo -n "Installing watchdog_uniden1.sh... "
 test -f watchdog_uniden1.sh && sudo cp watchdog_uniden1.sh $installpath
 echo "ok!"
+
+echo -n "Installing record0.sh... "
+test -f record0.sh && sudo cp record0.sh /etc/init.d
+echo "ok!"
