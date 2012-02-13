@@ -17,8 +17,8 @@ test -f usb_port_no.sh && sudo cp usb_port_no.sh $installpath || (echo "failed n
 test -f watchdog0.sh && sudo cp watchdog0.sh $installpath || (echo "failed not install watchdog0.sh"; exit 1)
 test -f watchdog1.sh && sudo cp watchdog1.sh $installpath || (echo "failed not install watchdog1.sh"; exit 1)
 test -f watchdog2.sh && sudo cp watchdog2.sh $installpath || (echo "failed not install watchdog2.sh"; exit 1)
-test -f watchdog_uniden0.sh && sudo cp watchdog_uniden0.sh || $installpath (echo "failed not install watchdog_uniden0.sh"; exit 1)
-test -f watchdog_uniden1.sh && sudo cp watchdog_uniden1.sh || $installpath (echo "failed not install watchdog_uniden1.sh"; exit 1)
+test -f watchdog_uniden0.sh && sudo cp watchdog_uniden0.sh $installpath || (echo "failed not install watchdog_uniden0.sh"; exit 1)
+test -f watchdog_uniden1.sh && sudo cp watchdog_uniden1.sh $installpath || (echo "failed not install watchdog_uniden1.sh"; exit 1)
 test -f record0.sh && sudo cp record0.sh /etc/init.d || (echo "failed not install record0.sh"; exit 1)
 sudo ln -s /etc/init.d/record0.sh /etc/rc2.d/S99record0.sh
 sudo ln -s /etc/init.d/record0.sh /etc/rc3.d/S99record0.sh
