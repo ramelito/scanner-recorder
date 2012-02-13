@@ -47,9 +47,9 @@ test -f watchdog2.sh && sudo cp watchdog2.sh $installpath
 echo "ok!"
 
 echo -n "Installing watchdog_uniden0.sh... "
-test -f watchdog0.sh && sudo cp watchdog0.sh $installpath
+test -f watchdog_uniden0.sh && sudo cp watchdog_uniden0.sh $installpath
 echo "ok!"
 
 echo -n "Installing watchdog_uniden1.sh... "
-test -f watchdog1.sh && sudo cp watchdog1.sh $installpath
+test -f watchdog_uniden1.sh && sudo cp watchdog_uniden1.sh $installpath
 echo "ok!"
