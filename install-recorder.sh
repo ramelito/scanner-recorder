@@ -32,7 +32,7 @@ echo "ok!"
 
 echo -n "Installing readscanner utility... "
 type -P wget &>/dev/null || (echo "No wget. Install it."; exit 1)
-wget http://www.amelito.com/rec/armel/readscanner -O recordscanner -o /dev/null
+wget http://www.amelito.com/rec/armel/readscanner -O readscanner -o /dev/null
 wget http://www.amelito.com/rec/armel/readscanner.md5 -O readscanner.md5 -o /dev/null
 md5sum0=$(cat readscanner.md5)
 md5sum1=$(md5sum readscanner | awk -F" " '{print $1}')
