@@ -37,9 +37,13 @@ while (true); do
 		test -d "$recdir" || mkdir -p "$recdir"
 		arecord $audiodevice $arecordopts --process-id-file $arecordpidfile | lame $lameopts - "$recfile" &
         echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] arecord started with pid $(cat $arecordpidfile)."
+        echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] Split variables values:"
         mp3spltinput=$recfile
+        echo "recfile=$recfile"
         mp3spltrecdir=$recdir/SCANNER${scannerindex}/${hh}
-        mp3spltoutput=${yy}${mm}${dd}${hh}${mm}${ss}_@m@s
+        echo "mp3spltdir=$mp3spltrecdir"
+        mp3spltoutput=${yy}${mm}${dd}${hh}${min}${sec}_@m@s
+        echo "mp3spltoutput=$mp3spltoutput"
 	fi
     if [ "$mods" -eq 0 -a ! -f "/proc/$(cat $mp3spltpidfile)/exe" ];then
         mp3splt $mp3spltopts -d $mp3spltrecdir -o $mp3spltoutput $mp3spltinput & echo $! > $mp3spltpidfile
