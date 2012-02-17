@@ -35,8 +35,8 @@ echo "ok!"
 
 echo -n "Installing readscanner utility... "
 type -P wget &>/dev/null || (echo "No wget. Install it."; exit 1)
-wget http://www.amelito.com/rec/armel/readscanner -O readscanner -o /dev/null
-wget http://www.amelito.com/rec/armel/readscanner.md5 -O readscanner.md5 -o /dev/null
+wget http://www.amelito.com/rec/armel/readscanner -O readscanner -q
+wget http://www.amelito.com/rec/armel/readscanner.md5 -O readscanner.md5 -q
 md5sum0=$(cat readscanner.md5)
 md5sum1=$(md5sum readscanner | awk -F" " '{print $1}')
 [ "$md5sum1" == "$md5sum0" ] || (echo "MD5 check sum failed"; exit 1)
