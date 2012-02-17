@@ -22,11 +22,11 @@ test -f watchdog2.sh && sudo cp watchdog2.sh $installpath || (echo "failed to in
 test -f watchdog_uniden0.sh && sudo cp watchdog_uniden0.sh $installpath || (echo "failed to install watchdog_uniden0.sh"; exit 1)
 test -f watchdog_uniden1.sh && sudo cp watchdog_uniden1.sh $installpath || (echo "failed to install watchdog_uniden1.sh"; exit 1)
 test -f record.conf && sudo cp record.conf $configpath || (echo "failed to install record.cfg"; exit 1)
-test -f record0.sh && sudo cp record0.sh /etc/init.d || (echo "failed to install record0.sh"; exit 1)
-test -L /etc/rc2.d/S99record0.sh || sudo ln -s etc/init.d/record0.sh /etc/rc2.d/S99record0.sh
-test -L /etc/rc3.d/S99record0.sh || sudo ln -s /etc/init.d/record0.sh /etc/rc3.d/S99record0.sh
-test -L /etc/rc4.d/S99record0.sh || sudo ln -s /etc/init.d/record0.sh /etc/rc4.d/S99record0.sh
-test -L /etc/rc5.d/S99record0.sh || sudo ln -s /etc/init.d/record0.sh /etc/rc5.d/S99record0.sh
+test -f record.sh && sudo cp record.sh /etc/init.d || (echo "failed to install record.sh"; exit 1)
+test -L /etc/rc2.d/S99record.sh || sudo ln -s etc/init.d/record.sh /etc/rc2.d/S99record.sh
+test -L /etc/rc3.d/S99record.sh || sudo ln -s /etc/init.d/record.sh /etc/rc3.d/S99record.sh
+test -L /etc/rc4.d/S99record.sh || sudo ln -s /etc/init.d/record.sh /etc/rc4.d/S99record.sh
+test -L /etc/rc5.d/S99record.sh || sudo ln -s /etc/init.d/record.sh /etc/rc5.d/S99record.sh
 echo "ok!"
 
 echo -n "Installing udev rules... "
