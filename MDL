@@ -20,7 +20,7 @@ do
   esac
 done
 
-readscanner="readscanner_$arch -d /dev/scanners/$scannerindex"
+readscanner="readscanner -d /dev/scanners/$scannerindex"
 scannerlck="/tmp/scanner$scannerindex.lck"
 
 res=`$readscanner -c MDL -s 50000 | sed -e 's///'`

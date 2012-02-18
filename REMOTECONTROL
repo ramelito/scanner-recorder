@@ -10,7 +10,7 @@ gid=0; key=0; qsh=0; qsc=0; csc=0; pwr=0; sts=0; glg=0; jmp=0; jnt=0; mnu=0
 
 temp=$(getopt -o $shortopts --long $longopts -n 'REMOTECONTROL' -- "$@")
 
-[ $? != 0 ] || { echo "Terminating..." >&2 ; exit 1 }
+#[ $? != 0 ] || ( echo "Terminating..." >&2 ; exit 1 )
 
 eval set -- "$temp"
 
@@ -37,22 +37,22 @@ test "X$scannerindex" == "X" && exit 1
 
 readscanner="readscanner -d /dev/scanners/$scannerindex -s 50000"
 
-[ $gid -eq 1 ] && { echo $($readscanner -c GID); exit 0 }
+[ "$gid" -eq 1 ] && ( echo $($readscanner -c GID); exit 0 )
 
-[ $key -eq 1 ] && { echo $($readscanner -c KEY,$key_opts); exit 0 }
+[ "$key" -eq 1 ] && ( echo $($readscanner -c KEY,$key_opts); exit 0 )
 
-[ $qsh -eq 1 ] && { echo $($readscanner -c QSH,$qsh_opts); exit 0 }
+[ "$qsh" -eq 1 ] && ( echo $($readscanner -c QSH,$qsh_opts); exit 0 )
 
-[ $qsc -eq 1 ] && { echo $($readscanner -c QSC,$qsc_opts); exit 0 }
+[ "$qsc" -eq 1 ] && ( echo $($readscanner -c QSC,$qsc_opts); exit 0 )
 
-[ $csc -eq 1 ] && { echo $($readscanner -c CSC,$csc_opts); exit 0 }
+[ "$csc" -eq 1 ] && ( echo $($readscanner -c CSC,$csc_opts); exit 0 )
 
-[ $PWR -eq 1 ] && { echo $($readscanner -c PWR); exit 0 }
+[ "$pwr" -eq 1 ] && ( echo $($readscanner -c PWR); exit 0 )
 
-[ $STS -eq 1 ] && { echo $($readscanner -c STS); exit 0 }
+[ "$sts" -eq 1 ] && ( echo $($readscanner -c STS); exit 0 )
 
-[ $GLG -eq 1 ] && { echo $($readscanner -c GLG); exit 0 }
+[ "$glg" -eq 1 ] && ( echo $($readscanner -c GLG); exit 0 )
 
-[ $jmp -eq 1 ] && { echo $($readscanner -c JMP,$jmp_opts); exit 0 }
+[ "$jmp" -eq 1 ] && ( echo $($readscanner -c JMP,$jmp_opts); exit 0 )
 
-[ $mnu -eq 1 ] && { echo $($readscanner -c MNU,$mnu_opts); exit 0 }
+[ "$mnu" -eq 1 ] && ( echo $($readscanner -c MNU,$mnu_opts); exit 0 )
