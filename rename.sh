@@ -3,7 +3,7 @@
 workdir=$1
 list=$(mktemp)
 
-ls $workdir | grep mp3 > $list
+ls $workdir | grep _ > $list
 
 while read line; do
     filename=${line%.*}
