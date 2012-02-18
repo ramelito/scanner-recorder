@@ -17,6 +17,7 @@ test -f recordcleaner.sh && sudo cp recordcleaner.sh $installpath || (echo "fail
 test -f split_record.sh && sudo cp split_record.sh $installpath || (echo "failed to install split_record.sh"; exit 1)
 test -f stop_record.sh && sudo cp stop_record.sh $installpath || (echo "failed to install stop_record.sh"; exit 1)
 test -f usb_port_no.sh && sudo cp usb_port_no.sh $installpath || (echo "failed to install usb_port_no.sh"; exit 1)
+test -f rename.sh && sudo cp rename.sh $installpath || (echo "failed to install rename.sh"; exit 1)
 test -f watchdog0.sh && sudo cp watchdog0.sh $installpath || (echo "failed to install watchdog0.sh"; exit 1)
 test -f watchdog1.sh && sudo cp watchdog1.sh $installpath || (echo "failed to install watchdog1.sh"; exit 1)
 test -f watchdog2.sh && sudo cp watchdog2.sh $installpath || (echo "failed to install watchdog2.sh"; exit 1)

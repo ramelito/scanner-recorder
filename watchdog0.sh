@@ -14,9 +14,11 @@ arecordopts="-f S16_LE -r $samplerate -c 1 -t wav -q"
 lameopts="-S -m m -q9 -b $bitrate"
 mp3spltopts="-s -p th=-50,min=2,trackmin=1,rm -Q -N"
 mp3spltpidfile="/tmp/mp3splt${scannerindex}.pid"
+renamepidfile="/tmp/rename${scannerindex}.pid"
 
 touch $arecordpidfile
 touch $mp3spltpidfile
+touch $renamepidfile
 
 while (true); do
 	yy=$(date +%Y)
@@ -47,6 +49,9 @@ while (true); do
 	fi
     if [ "$mods" -eq 0 -a ! -f "/proc/$(cat $mp3spltpidfile)/exe" ];then
         mp3splt $mp3spltopts -d $mp3spltrecdir -o $mp3spltoutput $mp3spltinput & echo $! > $mp3spltpidfile
+    fi
+    if [ "$mods" -eq 30 -a ! -f "/proc/$(cat $mp3spltpidfile)/exe" -a ! -f "/proc/$(cat $renamepidfile)/exe" ];then
+        rename.sh $mp3spltrecdir & echo $! > $renamepidfile
     fi
     sleep 1
 done
