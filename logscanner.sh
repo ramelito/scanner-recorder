@@ -7,9 +7,10 @@ shortopts="s:d:"
 
 arch=$(uname -m)
 
-delay=3000
+delay=1500
 
 step=30
+
 
 TEMP=`getopt -o $shortopts -n 'logscanner' -- "$@"`
 
@@ -28,6 +29,7 @@ while true ; do
 done
 
 lockfile="/tmp/scanner$scannerindex.lck"
+loggerlogfile="/tmp/logger${scannerindex}.log"
 
 prevline="EMPTY"
 curline="NOSIGNAL"
@@ -37,7 +39,7 @@ timer=0
 delay=${delay}000000
 sql=0
 
-refepochtimefile="/tmp/refepochtime${scannerindex}"
+refepoch_timefile="/tmp/refepochtime${scannerindex}"
 
 if [ "X$scannerindex" == "X" ]; then
 	exit 1
@@ -51,7 +53,7 @@ do
 
 		line=""
 		epoch_time=$(date +%s)
-		ref_epoch_time=$(cat $refepochtimefile)
+		ref_epoch_time=$(cat $refepoch_timefile)
 		nanos=$(date +%N)
 		hundredths=${nanos:0:2}
 
@@ -59,59 +61,66 @@ do
 			printf "$epoch_time.$hundredths\n"
 			rec=0
 			timer=0
+#            echo "$epoch_time unlocking scanner while record." >> $loggerlogfile
 		fi
 	
 		if [ $inuse -eq 1 ]; then	
-			line=$(REMOTECONTROL -s $scannerindex --glg | sed -e 's///g' | grep -v ERR | grep GLG)
+            while ( true ); do
+			    line=$(REMOTECONTROL -s $scannerindex --glg )
+                [[ "$line" != *ERR* ]] && break
+            done
+#           echo "$epoch_time line from scanner - $line" >> $loggerlogfile
 		fi
 
-		sql=$(echo $line | awk -F, '{print $9}')
-		if [ "X$sql" = "X" ]; then 
+		sql0=$(echo $line | awk -F, '{print $9}')
+		if [[ ( "X$sql0" == "X" || "$sql0" -eq 0 ) && $sql -eq 1 ]]; then 
 			sql=0; 
-		fi
+#            echo "$epoch_time squelch is closed - $sql" >> $loggerlogfile
+        fi
+        
+        [ "$sql0" == 1 ] && sql=1
 
 		system=$(echo $line | awk -F, '{print $6}' | sed -e 's/ //g')
-                group=$(echo $line | awk -F, '{print $7}' | sed -e 's/ //g')
-                channel=$(echo $line | awk -F, '{print $8}' | sed -e 's/ //g')
-                code=$(echo $line | awk -F, '{print $5}')
-                p25=$(echo $line | awk -F, '{print $13}')
-                systag=$(echo $line | awk -F, '{print $11}')
-                chantag=$(echo $line | awk -F, '{print $12}')
-                freq=$(echo $line | awk -F, '{print $2}')
-                curline="$system$group$channel$freq$code$p25"
+        group=$(echo $line | awk -F, '{print $7}' | sed -e 's/ //g')
+        channel=$(echo $line | awk -F, '{print $8}' | sed -e 's/ //g')
+        code=$(echo $line | awk -F, '{print $5}')
+        p25=$(echo $line | awk -F, '{print $13}')
+        systag=$(echo $line | awk -F, '{print $11}')
+        chantag=$(echo $line | awk -F, '{print $12}')
+        freq=$(echo $line | awk -F, '{print $2}')
+        curline="$system$group$channel$freq"
 
-                if [[ "$freq" =~ \. ]]; then
-                        freqtgid="${freq}_MHz"
-                else
-                        freqtgid=$freq
-                fi
+        [[ "$freq" =~ \. ]] && freqtgid="${freq}_MHz" || freqtgid=$freq
 
-                if [ "$code" != "0" ]; then
-                        code=$(code.sh $code)
-                        freqtgid="${freq}_MHz_${code}"
-                fi
+        if [ "$code" != "0" ]; then
+            code=$(code.sh $code)
+            freqtgid="${freq}_MHz_${code}"
+        fi
 
-                if [ "$p25" != "NONE" ]; then
-                        freqtgid="${freq}_MHz_${p25}"
-                fi
+        if [ "$p25" != "NONE" ]; then
+            freqtgid="${freq}_MHz_${p25}"
+        fi
 
-		if [ "X$curline" = "X MHz" ]; then
+		if [ "X$curline" = "X" ]; then
 			if [ $rec -eq 0 ]; then
 		  		curline="NOSIGNAL"
 		 	else
 				curline="$prevline"
 			fi
+#           echo "$epoch_time curline is empty - $curline $rec" >> $loggerlogfile
 		fi
 
 		if [ $sql == 1 ]; then
 			if [ "$prevline" != "$curline" -a $rec -eq 1 -o "$prevline" != "$curline" -a $timer -gt 0 ]; then	
 				printf "$epoch_time.$hundredths\n"
 				rec=0
+#                echo "$epoch_time squelch is opened, new transmission, rec is on or timer is ticking" >> $loggerlogfile
 			fi
 			timer=0
 
 			if [ "$prevline" != "$curline" -o $rec -eq 0 ]; then
 				printf "$system,$group,$channel,$freqtgid,$code,$p25,$systag,$chantag,$ref_epoch_time,$epoch_time.$hundredths,"
+#               echo "$epoch_time squelch is opened, new transmission, rec is off" >> $loggerlogfile
 				rec=1
 			fi
 		fi
@@ -128,6 +137,7 @@ do
 					curline="NOSIGNAL"
 					timer=0
 					printf "$epoch_time.$hundredths\n"
+#                    echo "$epoch_time squelch is closed, timer expired" >> $loggerlogfile
 				fi
 			fi
 		fi

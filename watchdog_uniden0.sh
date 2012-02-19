@@ -28,10 +28,10 @@ while (true); do
 	mm=$(date +%m)
 	dd=$(date +%d)
 	hh=$(date +%H)
-        min=$(date +%M)
-        sec=$(date +%S)
+    min=$(date +%M)
+    sec=$(date +%S)
 	epoch0=$(date +%s)
-        mod=$(expr $min % $div)
+    mod=$(expr $min % $div)
 	recdir=$scannerhome/${yy}${mm}${dd}
 	recfile=${recdir}/${yy}${mm}${dd}${hh}_SCANNER${scannerindex}_${min}.mp3
 	logfile=${recdir}/${yy}${mm}${dd}${hh}_SCANNER${scannerindex}_${min}.log
@@ -46,7 +46,7 @@ while (true); do
 		echo $(date +%s) > $refepochtimefile
 
 		arecord $audiodevice $arecordopts --process-id-file $arecordpidfile | lame $lameopts - "$recfile" &
-		logscanner.sh -s $scannerindex > $logfile & echo $! > $loggerpidfile
+		logscanner.sh -s $scannerindex -d 800 > $logfile & echo $! > $loggerpidfile
 		sleep 2
 		test -e "/proc/$(cat $splitpidfile)/exe" && kill -9 $(cat $splitpidfile)
 		split_record.sh $logfile & echo $! > $splitpidfile
