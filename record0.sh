@@ -5,6 +5,8 @@ export PATH=/opt/bin:$PATH
 
 res=""
 mdl="^MDL*"
+watchdoglog="/tmp/watchdog.log"
+uwatchdoglog="/tmp/uwatchdog.log"
 
 test -f /scanner_audio/record.conf && cp /scanner_audio/record.conf /opt/etc/
 test -f /opt/etc/record.conf && source /opt/etc/record.conf || ( echo "File record.conf not found in /opt/etc."; exit 1 )
@@ -37,34 +39,25 @@ case "$s0_profile" in
         hq)
                 s0_samplerate=16000; s0_bitrate=48
                 ;;
-	*)
+    	*)
                 s0_samplerate=8000; s0_bitrate=16
-		;;	
+        		;;	
 esac
 
 if [ $s0_type -eq 0 ]; then
 	echo "Scanner is UNcontrolled."
 	if [ $s0_rec -eq 0 ]; then
 		echo "Simple recording."
-		watchdog0.sh $s0_scard $s0_bitrate $s0_samplerate 1>/tmp/watchdog0.log &
+		watchdog0.sh $s0_rec $s0_scard $s0_bitrate $s0_samplerate 1>$watchdoglog &
 	fi
-	if [ $s0_rec -eq 1 ]; then
-		echo "Simple recording and livecast."
+	if [ $s0_rec -gt 0 ]; then
+		echo "Livecast with optional recording."
 
 		test "X$s0_ihost" == "X" && ( echo "Icecast server host not defined. Aborting."; exit 1 )
 		test "X$s0_ipass" == "X" && ( echo "Icecast password not defined. Aborting."; exit 1 )
 		test "X$s0_imount" == "X" && ( echo "Icecast mount not defined. Aborting."; exit 1 )
 
-		watchdog1.sh $s0_scard $s0_bitrate $s0_samplerate $s0_ihost $s0_ipass $s0_imount 1>/tmp/watchdog1.log &
-	fi
-	if [ $s0_rec -eq 2 ]; then
-		echo "Livecast only."
-
-		test "X$s0_ihost" == "X" && ( echo "Icecast server host not defined. Aborting."; exit 1 )
-		test "X$s0_ipass" == "X" && ( echo "Icecast password not defined. Aborting."; exit 1 )
-		test "X$s0_imount" == "X" && ( echo "Icecast mount not defined. Aborting."; exit 1 )
-
-		watchdog2.sh $s0_scard $s0_bitrate $s0_samplerate $s0_ihost $s0_ipass $s0_imount 1>/tmp/watchdog2.log &
+		watchdog0.sh $s0_rec $s0_scard $s0_bitrate $s0_samplerate $s0_ihost $s0_ipass $s0_imount 1>$watchdoglog &
 	fi
 fi
 
@@ -82,7 +75,7 @@ if [ $s0_type -eq 1 ]; then
 	done
 	if [ $s0_rec -eq 0 ]; then
 		echo "Recording for Uniden scanner."
-		watchdog_uniden0.sh $s0_port $s0_scard $s0_bitrate $s0_samplerate 1>/tmp/watchdog_uniden0.log &
+		watchdog_uniden0.sh $s0_port $s0_scard $s0_bitrate $s0_samplerate 1>$uwatchdoglog &
 	fi
 	if [ $s0_rec -eq 1 ]; then
 		echo "Recording for Uniden scanner and livecast."
@@ -91,6 +84,6 @@ if [ $s0_type -eq 1 ]; then
 		test "X$s0_ipass" == "X" && ( echo "Icecast password not defined. Aborting."; exit 1 )
 		test "X$s0_imount" == "X" && ( echo "Icecast mount not defined. Aborting."; exit 1 )
 
-		watchdog_uniden1.sh $s0_port $s0_scard $s0_bitrate $s0_samplerate $s0_ihost $s0_ipass $s0_imount 1>/tmp/watchdog_uniden1.log &
+		watchdog_uniden1.sh $s0_port $s0_scard $s0_bitrate $s0_samplerate $s0_ihost $s0_ipass $s0_imount 1>$uwatchdoglog &
 	fi
 fi
