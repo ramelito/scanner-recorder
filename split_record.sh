@@ -2,8 +2,6 @@
 
 scannerhome="/scanner_audio"
 scannerlog=$1
-prevline=""
-line=""
 comma=".*,$"
 mhz=".*MHz.*"
 correction="-0.5"
@@ -11,8 +9,11 @@ fname=${scannerlog##*/}
 fname2=${fname%.*}
 yymmdd=${fname:0:8}
 hh=${fname:8:2}
+cutlinesfile="/tmp/cutlines${fname:18:1}"
+splitlog="/tmp/split${fname:18:1}"
 record_file="$scannerhome/${yymmdd}/${fname2}.mp3"
 mp3spltopts="-Q"
+numlines0=0
 
 test $# -eq 0 && exit 1
 test -f $scannerlog || exit 1
@@ -20,9 +21,11 @@ test -f $record_file || exit 1
 
 while (true)	
 do
-	line=$(tail -n1 $scannerlog)
-	[[ "$line" =~ $comma ]] && continue
-	if [ "$prevline" != "$line" ]; then
+	numlines=$(cat $scannerlog | wc -l)
+    [ $numlines -gt $numlines0 ] && let cutlines=$numlines-$numlines0 || cutlines=0
+    numlines0=$numlines
+    tail -n${cutlines} $scannerlog > $cutlinesfile 
+    while read line; do
 		system=$(echo $line | awk -F, '{print $1}')
         group=$(echo $line | awk -F, '{print $2}')
         channel=$(echo $line | awk -F, '{print $3}')
@@ -30,6 +33,7 @@ do
         r0=$(echo $line | awk -F, '{print $9}')
         s0=$(echo $line | awk -F, '{print $10}')
         e0=$(echo $line | awk -F, '{print $11}')
+        [ "X$e0" == "X" ] && continue
         s=$(echo "scale=2; $s0-$r0$correction" | bc)
         e=$(echo "scale=2; $e0-$r0$correction" | bc)
 		ss=$(echo $s | awk -F. '{print $1}')
@@ -47,10 +51,8 @@ do
 	    dir1="${scannerhome}/${yymmdd}/${system}/${group}/${channel}/${hh}"
 		test "X$group" == "X" && dir1="${scannerhome}/${yymmdd}/${system}/${freq}/${hh}"
 		[[ "$freq" =~ $mhz ]] || dir1="${scannerhome}/${yymmdd}/${system}/${freq}/${hh}"
-#        test -d $dir1 || mkdir -p $dir1
 		mp3splt $mp3spltopts $record_file $sm.$ss.$sh $em.$es.$eh -d ${dir1} -o "${filename}" 2>/dev/null
-		echo "Splitting ${filename_date_part}_${freq}.mp3 from $record_file to ${dir1}, start $sm.$ss.$sh, end $em.$es.$eh.">> /tmp/split.log
-	fi
-	prevline="$line"
-	sleep 1s
+		echo "Splitting ${filename_date_part}_${freq}.mp3 from $record_file to ${dir1}, start $sm.$ss.$sh, end $em.$es.$eh." >> $splitlog
+    done < $cutlinesfile
+	sleep 10s
 done
