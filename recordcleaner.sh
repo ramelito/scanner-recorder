@@ -1,10 +1,29 @@
 #!/bin/bash
 
 scannerhome="/scanner_audio"
-config="/media/mmcblk0p3/record.conf"
+test -f /scanner_audio/record.conf && cp /scanner_audio/record.conf /opt/etc/
+test -f /opt/etc/record.conf && source /opt/etc/record.conf || ( echo "File record.conf not found in /opt/etc."; exit 1 )
+config="/opt/etc/record.conf"
 clearlist=/tmp/clearlist
 
-bitrate=48
+s0_profile=$(echo $scanner0 | awk -F";" '{print $8}')
+
+case "$s0_profile" in
+            lq)
+                bitrate=16
+                ;;
+            mq)
+                bitrate=24
+                ;;
+            hq)
+                bitrate=48
+                ;;
+            *)
+                bitrate=16
+                ;;
+        esac
+
+
 let onehourleft=bitrate*3600*1000/8
 
 if [ -f $config ]; then
