@@ -8,22 +8,26 @@ mdl="^MDL*"
 watchdoglog="/tmp/watchdog.log"
 uwatchdoglog="/tmp/uwatchdog.log"
 
-test -f /scanner_audio/record.conf && cp /scanner_audio/record.conf /opt/etc/
-test -f /opt/etc/record.conf && source /opt/etc/record.conf || ( echo "File record.conf not found in /opt/etc."; exit 1 )
-
 type -P arecord &>/dev/null || ( echo "No arecord utility is installed. Install alsa-utils."; exit 1 )
 type -P lame &>/dev/null || ( echo "No lame utility is installed. Install lame."; exit 1 )
 type -P darkice &>/dev/null || ( echo "No darkice utility is installed. Install darkice."; exit 1 )
 type -P mp3splt &>/dev/null || ( echo "No mp3splt utility is installed. Install mp3splt."; exit 1 )
 
-s0_type=$(echo $scanner0 | awk -F";" '{print $1}')
-s0_port=$(echo $scanner0 | awk -F";" '{print $2}')
-s0_scard=$(echo $scanner0 | awk -F";" '{print $3}')
-s0_rec=$(echo $scanner0 | awk -F";" '{print $4}')
-s0_ihost=$(echo $scanner0 | awk -F";" '{print $5}')
-s0_ipass=$(echo $scanner0 | awk -F";" '{print $6}')
-s0_imount=$(echo $scanner0 | awk -F";" '{print $7}')
-s0_profile=$(echo $scanner0 | awk -F";" '{print $8}')
+scanner0=$1
+echo $scanner0
+
+s0_type=$(echo $scanner0 | awk -F"," '{print $1}')
+s0_port=$(echo $scanner0 | awk -F"," '{print $2}')
+s0_scard=$(echo $scanner0 | awk -F"," '{print $3}')
+s0_rec=$(echo $scanner0 | awk -F"," '{print $4}')
+s0_ihost=$(echo $scanner0 | awk -F"," '{print $5}')
+s0_ipass=$(echo $scanner0 | awk -F"," '{print $6}')
+s0_imount=$(echo $scanner0 | awk -F"," '{print $7}')
+s0_profile=$(echo $scanner0 | awk -F"," '{print $8}')
+
+echo $s0_type
+
+exit 0
 
 test "X$s0_rec" == "X" && s0_rec=0
 test "X$s0_scard" == "X" && s0_card=0
