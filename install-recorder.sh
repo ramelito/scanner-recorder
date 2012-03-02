@@ -20,7 +20,6 @@ test -f usb_port_no.sh &&  cp usb_port_no.sh $installpath || (echo "failed to in
 test -f rename.sh &&  cp rename.sh $installpath || (echo "failed to install rename.sh"; exit 1)
 test -f watchdog0.sh &&  cp watchdog0.sh $installpath || (echo "failed to install watchdog0.sh"; exit 1)
 test -f watchdog_uniden0.sh &&  cp watchdog_uniden0.sh $installpath || (echo "failed to install watchdog_uniden0.sh"; exit 1)
-test -f watchdog_uniden1.sh &&  cp watchdog_uniden1.sh $installpath || (echo "failed to install watchdog_uniden1.sh"; exit 1)
 test -f record.conf &&  cp record.conf $configpath || (echo "failed to install record.cfg"; exit 1)
 test -f record0.sh &&  cp record0.sh $installpath || (echo "failed to install record.sh"; exit 1)
 test -f record.sh &&  cp record.sh /etc/init.d || (echo "failed to install record.sh"; exit 1)
@@ -33,11 +32,12 @@ echo "ok!"
 
 echo -n "Installing readscanner utility... "
 type -P wget &>/dev/null || (echo "No wget. Install it."; exit 1)
-wget http://www.amelito.com/rec/armel/readscanner -O readscanner -q
-wget http://www.amelito.com/rec/armel/readscanner.md5 -O readscanner.md5 -q
-md5sum0=$(cat readscanner.md5)
-md5sum1=$(md5sum readscanner | awk -F" " '{print $1}')
+wget http://www.amelito.com/rec/armel/readscanner -O /tmp/readscanner -q
+wget http://www.amelito.com/rec/armel/readscanner.md5 -O /tmp/readscanner.md5 -q
+md5sum0=$(cat /tmp/readscanner.md5)
+md5sum1=$(md5sum /tmp/readscanner | awk -F" " '{print $1}')
 [ "$md5sum1" == "$md5sum0" ] || (echo "MD5 check sum failed"; exit 1)
- chmod +x readscanner
- cp readscanner $installpath
+ chmod +x /tmp/readscanner
+ cp /tmp/readscanner $installpath
+ rm /tmp/readscanner /tmp/readscanner.md5
 echo "ok!"

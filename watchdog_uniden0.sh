@@ -2,17 +2,18 @@
 
 uopt=$1
 scannerindex=$2
-bitrate=$3
-samplerate=$4
-host=$5
-pass=$6
-mount=$7
+scardindex=$3
+bitrate=$4
+samplerate=$5
+host=$6
+pass=$7
+mount=$8
 divm=60
 divs=60
 
 scannerhome="/scanner_audio"
 arecordpidfile="/tmp/arecord${scannerindex}.pid"
-arecordopts="-Dplughw:${scannerindex},0 -f S16_LE -r $samplerate -c 1 -q -t wav --process-id-file $arecordpidfile"
+arecordopts="-Dplughw:${scardindex},0 -f S16_LE -r $samplerate -c 1 -q -t wav --process-id-file $arecordpidfile"
 lameopts="-S -m m -q9 -b $bitrate -"
 darkconf="/tmp/darkice${scannerindex}.conf"
 darkpidfile="/tmp/darkice${scannerindex}.pid"
@@ -40,7 +41,7 @@ gendarkconf () {
         reconnect       = yes
 
         [input] 
-        device          = plughw:${scannerindex},0
+        device          = plughw:${scardindex},0
         sampleRate      = $samplerate
         bitsPerSample   = 16
         channel         = 1
@@ -123,9 +124,11 @@ record_and_or_broadcast() {
             		echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] Connection broken, continue with offline recording if option 1."
             		test -f "/proc/$(cat $arecordpidfile)/exe" -o $uopt -eq 2 || arecord $arecordopts | lame $lameopts "$recfile" &
         	fi
-                [ $uopt -eq 1 ] && logscanner.sh $loggeropts > $logfile & echo $! > $loggerpidfile
+            if [ $uopt -eq 1 ];    then
+                logscanner.sh $loggeropts > $logfile & echo $! > $loggerpidfile
                 sleep 1
-                [ $uopt -eq 1 ] && split_record.sh $logfile & echo $! > $splitpidfile
+                split_record.sh $logfile & echo $! > $splitpidfile
+            fi
     fi
 }
 
@@ -140,6 +143,7 @@ while (true); do
 	mods=$(expr $sec % $divs)
 	recdir=$scannerhome/${yy}${mm}${dd}
 	recfile=${recdir}/${yy}${mm}${dd}${hh}_SCANNER${scannerindex}_${min}.mp3
+    logfile=${recdir}/${yy}${mm}${dd}${hh}_SCANNER${scannerindex}_${min}.log
 
     	case "$uopt" in
         	0) record_only
