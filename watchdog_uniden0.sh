@@ -144,6 +144,7 @@ while (true); do
 	recdir=$scannerhome/${yy}${mm}${dd}
 	recfile=${recdir}/${yy}${mm}${dd}${hh}_SCANNER${scannerindex}_${min}.mp3
     logfile=${recdir}/${yy}${mm}${dd}${hh}_SCANNER${scannerindex}_${min}.log
+		echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] DEBUG: Timing $modm $mods."
 
     	case "$uopt" in
         	0) record_only
@@ -152,5 +153,5 @@ while (true); do
             	;;
     	esac
 
-    	sleep 1
+    	sleep 0.75
 done

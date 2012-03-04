@@ -137,5 +137,5 @@ while (true); do
     if [ "$mods" -eq 30 -a ! -f "/proc/$(cat $mp3spltpidfile)/exe" -a ! -f "/proc/$(cat $renamepidfile)/exe" -a $uopt -ne 2 ];then
         rename.sh $mp3spltrecdir & echo $! > $renamepidfile
     fi
-    sleep 1
+    sleep 0.75
 done
