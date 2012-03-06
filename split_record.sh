@@ -4,20 +4,27 @@ scannerhome="/scanner_audio"
 scannerlog=$1
 comma=".*,$"
 mhz=".*MHz.*"
-correction="-0.5"
+correction="-1.5"
 fname=${scannerlog##*/}
 fname2=${fname%.*}
 yymmdd=${fname:0:8}
 hh=${fname:8:2}
 cutlinesfile="/tmp/cutlines${fname:18:1}"
 splitlog="/tmp/split${fname:18:1}.log"
-record_file="$scannerhome/${yymmdd}/${fname2}.mp3"
+record_file="$scannerhome/${yymmdd}/ARCHIVE/${fname2}.mp3"
 mp3spltopts="-Q"
 numlines0=0
 
+
+echo "Waiting 60 seconds for data to begin capturing..."
+
+sleep 60
+
+echo "Checking $scannerlog and $record_file for existence."
+
 test $# -eq 0 && exit 1
-test -f $scannerlog || exit 1
-test -f $record_file || exit 1 
+test -f $scannerlog || ( echo "$scannerlog does not exists"; exit 1 )
+test -f $record_file || (echo "$record_file does not exists"; exit 1 )
 
 while (true)	
 do

@@ -50,7 +50,6 @@ echo 1 > $lockfile
 while (true)	
 do 
 		inuse=$(cat $lockfile)
-
 		line=""
 		epoch_time=$(date +%s)
 		ref_epoch_time=$(cat $refepoch_timefile)
@@ -68,18 +67,12 @@ do
             while ( true ); do
 			    line=$(REMOTECONTROL -s $scannerindex --glg )
                 [[ "$line" != *ERR* ]] && break
+                sleep 0.2
             done
 #           echo "$epoch_time line from scanner - $line" >> $loggerlogfile
 		fi
 
-		sql0=$(echo $line | awk -F, '{print $9}')
-		if [[ ( "X$sql0" == "X" || "$sql0" -eq 0 ) && $sql -eq 1 ]]; then 
-			sql=0; 
-#            echo "$epoch_time squelch is closed - $sql" >> $loggerlogfile
-        fi
-        
-        [ "$sql0" == 1 ] && sql=1
-
+		sql=$(echo $line | awk -F, '{print $9}')
 		system=$(echo $line | awk -F, '{print $6}' | sed -e 's/ //g')
         group=$(echo $line | awk -F, '{print $7}' | sed -e 's/ //g')
         channel=$(echo $line | awk -F, '{print $8}' | sed -e 's/ //g')
@@ -89,6 +82,10 @@ do
         chantag=$(echo $line | awk -F, '{print $12}')
         freq=$(echo $line | awk -F, '{print $2}')
         curline="$system$group$channel$freq"
+
+        if [ "X$sql" == "X" ];then
+            sql=0
+        fi
 
         [[ "$freq" =~ \. ]] && freqtgid="${freq}_MHz" || freqtgid=$freq
 
