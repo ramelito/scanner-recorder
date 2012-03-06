@@ -118,7 +118,7 @@ while (true); do
     sec=$(date +%S)
     modm=$(expr $min % $divm)
     mods=$(expr $sec % $divs)
-	recdir=$scannerhome/${yy}${mm}${dd}
+	recdir=$scannerhome/${yy}${mm}${dd}/ARCHIVE
 	recfile=${recdir}/${yy}${mm}${dd}${hh}_SCANNER${scannerindex}_${min}.mp3
 
     #record_only
