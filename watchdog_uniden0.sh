@@ -67,12 +67,18 @@ record () {
         test -f "/proc/$(cat $splitpidfile)/exe" && kill -9 $(cat $splitpidfile)
 	
 		test -d "$recdir" || mkdir -p "$recdir"
-		echo $(date +%s) > $refepochtimefile        
+		#echo $(date +%s) > $refepochtimefile        
 	
 		echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] arecord opts: $arecordopts."
         	echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] lame opts: $lameopts."
 
 		arecord $arecordopts | lame $lameopts "$recfile" &
+        sleep 1.5
+        test -f $arecordpidfile || exit 1
+        nanos=$(stat -c %z $arecordpidfile | awk -F. '{print $2}')
+        reftime=$(stat -c %Z $arecordpidfile)
+        echo $reftime.${nanos:0:2} > $refepochtimefile
+#        test -f "/proc/$(cat $arecordpidfile)/exe" && stat -c %Z $arecordpidfile >$refepochtimefile || exit 1
 		logscanner.sh $loggeropts > $logfile & echo $! > $loggerpidfile
         split_record.sh $logfile & echo $! > $splitpidfile
 
