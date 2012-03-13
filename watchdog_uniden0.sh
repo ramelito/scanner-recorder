@@ -22,7 +22,9 @@ refepochtimefile="/tmp/refepochtime${scannerindex}"
 scannerlck="/tmp/scanner${scannerindex}.lck"
 loggerpidfile="/tmp/logger${scannerindex}.pid"
 splitpidfile="/tmp/split${scannerindex}.pid"
+stopfile="/tmp/stop${scannerindex}"
 loggeropts="-s $scannerindex -d 800"
+glgopts="-d /dev/scanners/$scannerindex"
 
 host0=$(echo $host | awk -F: '{print $1}')
 port=$(echo $host | awk -F: '{print $2}')
@@ -31,6 +33,8 @@ touch $arecordpidfile
 touch $splitpidfile
 touch $loggerpidfile
 touch $darkpidfile
+
+echo 0 > $stopfile
 
 [ "X$uopt" == "X" ] && uopt=0
 
@@ -63,8 +67,8 @@ record () {
 		echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] Starting new instance."
         	echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] Going to record to $recfile."
         test -f "/proc/$(cat $arecordpidfile)/exe" && kill -9 $(cat $arecordpidfile)
-        test -f "/proc/$(cat $loggerpidfile)/exe" && kill -9 $(cat $loggerpidfile)
-        test -f "/proc/$(cat $splitpidfile)/exe" && kill -9 $(cat $splitpidfile)
+        test -f "/proc/$(cat $loggerpidfile)/exe" && kill $(cat $loggerpidfile)
+        test -f "/proc/$(cat $splitpidfile)/exe" && kill $(cat $splitpidfile)
 	
 		test -d "$recdir" || mkdir -p "$recdir"
 		#echo $(date +%s) > $refepochtimefile        
@@ -79,7 +83,7 @@ record () {
         reftime=$(stat -c %Z $arecordpidfile)
         echo $reftime.${nanos:0:2} > $refepochtimefile
 #        test -f "/proc/$(cat $arecordpidfile)/exe" && stat -c %Z $arecordpidfile >$refepochtimefile || exit 1
-		logscanner.sh $loggeropts > $logfile & echo $! > $loggerpidfile
+		glg $glgopts | logscanner.sh $loggeropts > $logfile & echo $! > $loggerpidfile
         split_record.sh $logfile & echo $! > $splitpidfile
 
         	echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] arecord started with pid $(cat $arecordpidfile)."
@@ -131,8 +135,8 @@ while (true); do
         if [ $modm -eq 0 -a $modf -eq 0 ]; then
 		    echo 0 > $scannerlck; sleep 1
             test -f "/proc/$(cat $arecordpidfile)/exe" && kill -9 $(cat $arecordpidfile)
-            test -f "/proc/$(cat $loggerpidfile)/exe" && kill -9 $(cat $loggerpidfile)
-            test -f "/proc/$(cat $splitpidfile)/exe" && kill -9 $(cat $splitpidfile)
+            test -f "/proc/$(cat $loggerpidfile)/exe" && kill $(cat $loggerpidfile)
+            test -f "/proc/$(cat $splitpidfile)/exe" && kill $(cat $splitpidfile)
             modf=1
         fi
 
@@ -150,5 +154,14 @@ while (true); do
 
         [ $modm -ne 0 ] && modf=0
 #		echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] DEBUG: Timing $modm $modf."
+
+        if [ $(cat $stopfile) == 1 ]; then
+            test -f "/proc/$(cat $arecordpidfile)/exe" && kill -9 $(cat $arecordpidfile)
+            test -f "/proc/$(cat $loggerpidfile)/exe" && kill $(cat $loggerpidfile)
+            test -f "/proc/$(cat $splitpidfile)/exe" && kill $(cat $splitpidfile)
+            test -f "/proc/$(cat $darkpidfile)/exe" && kill -9 $(cat $darkpidfile)
+
+            exit 1
+        fi
 
 done

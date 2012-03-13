@@ -3,11 +3,9 @@
 PATH=/opt/bin/:$PATH
 export PATH
 
-shortopts="s:d:"
+shortopts="s:,d:"
 
-arch=$(uname -m)
-
-delay=1500
+delay=800
 
 step=30
 
@@ -21,14 +19,15 @@ eval set -- "$TEMP"
 
 while true ; do
         case "$1" in
-                -s) scannerindex=$2 ; shift 2 ;;
                 -d) delay=$2 ; shift 2 ;;
+                -s) scannerindex=$2; shift 2 ;;
                 --) shift ; break ;;
                 *) echo "Internal error!" ; exit 1 ;;
         esac
 done
 
-lockfile="/tmp/scanner$scannerindex.lck"
+[ "X$scannerindex" == "X" ] && exit 1
+
 loggerlogfile="/tmp/logger${scannerindex}.log"
 
 prevline="EMPTY"
@@ -41,38 +40,26 @@ sql=0
 
 refepoch_timefile="/tmp/refepochtime${scannerindex}"
 
-if [ "X$scannerindex" == "X" ]; then
-	exit 1
-fi
+function on_exit() {
+	epoch_time=$(date +%s)
+	nanos=$(date +%N)
+	hundredths=${nanos:0:2}
+    [ "$sql" == 1 ] && printf "$epoch_time.$hundredths\n"
+    exit 0
+}
 
-echo 1 > $lockfile
+trap on_exit SIGINT SIGTERM
 
 while (true)	
 do 
-		inuse=$(cat $lockfile)
-		line=""
 		epoch_time=$(date +%s)
 		ref_epoch_time=$(cat $refepoch_timefile)
 		nanos=$(date +%N)
 		hundredths=${nanos:0:2}
 
-		if [ $rec -eq 1 -a $inuse -eq 0 ]; then
-			printf "$epoch_time.$hundredths\n"
-			rec=0
-			timer=0
-#            echo "$epoch_time unlocking scanner while record." >> $loggerlogfile
-		fi
-	
-		if [ $inuse -eq 1 ]; then	
-            while ( true ); do
-			    line=$(REMOTECONTROL -s $scannerindex --glg )
-                [[ "$line" != *ERR* ]] && break
-                sleep 0.2
-            done
-#           echo "$epoch_time line from scanner - $line" >> $loggerlogfile
-		fi
-
-		sql=$(echo $line | awk -F, '{print $9}')
+        read line
+		
+        sql=$(echo $line | awk -F, '{print $9}')
 		system=$(echo $line | awk -F, '{print $6}' | sed -e 's/ //g')
         group=$(echo $line | awk -F, '{print $7}' | sed -e 's/ //g')
         channel=$(echo $line | awk -F, '{print $8}' | sed -e 's/ //g')
@@ -122,7 +109,7 @@ do
 			fi
 		fi
 
-		if [ $sql -eq 0 -a $inuse -eq 1 ]; then
+		if [ $sql -eq 0 ]; then
 			if [ $rec -eq 1 ]; then
 				if [ $timer -eq 0 ]; then
 				   timer=$(date +%s%N)

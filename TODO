@@ -1,11 +1,7 @@
 Task list to make scanner record better
 
-1. Merge controlled scanner scripts into single one.
+1. Extensive logging when squelch is opened.
 
-2. Introduce multiple scanner management.
+2. Script for icecast meta data update.
 
-3. Extensive logging when squelch is opened.
-
-4. Script for icecast meta data update.
-
-5. ...
+3. ...
