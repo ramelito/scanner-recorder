@@ -8,6 +8,7 @@ samplerate=$5
 host=$6
 pass=$7
 mount=$8
+icao=$9
 divm=60
 divs=60
 modf=0
@@ -22,9 +23,9 @@ refepochtimefile="/tmp/refepochtime${scannerindex}"
 scannerlck="/tmp/scanner${scannerindex}.lck"
 loggerpidfile="/tmp/logger${scannerindex}.pid"
 splitpidfile="/tmp/split${scannerindex}.pid"
+updatepidfile="/tmp/update${scannerindex}.pid"
 stopfile="/tmp/stop${scannerindex}"
-loggeropts="-s $scannerindex -d 800"
-glgopts="-d /dev/scanners/$scannerindex"
+glgopts="-d /dev/scanners/$scannerindex -t 0.8"
 
 host0=$(echo $host | awk -F: '{print $1}')
 port=$(echo $host | awk -F: '{print $2}')
@@ -33,8 +34,10 @@ touch $arecordpidfile
 touch $splitpidfile
 touch $loggerpidfile
 touch $darkpidfile
+touch $updatepidfile
 
 echo 0 > $stopfile
+echo 0 > $scannerlck
 
 [ "X$uopt" == "X" ] && uopt=0
 
@@ -71,19 +74,18 @@ record () {
         test -f "/proc/$(cat $splitpidfile)/exe" && kill $(cat $splitpidfile)
 	
 		test -d "$recdir" || mkdir -p "$recdir"
-		#echo $(date +%s) > $refepochtimefile        
+		test -d "$logdir" || mkdir -p "$logdir"
+		test -d "$elogdir" || mkdir -p "$elogdir"
 	
 		echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] arecord opts: $arecordopts."
-        	echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] lame opts: $lameopts."
+       	echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] lame opts: $lameopts."
 
 		arecord $arecordopts | lame $lameopts "$recfile" &
         sleep 1.5
         test -f $arecordpidfile || exit 1
         nanos=$(stat -c %z $arecordpidfile | awk -F. '{print $2}')
         reftime=$(stat -c %Z $arecordpidfile)
-        echo $reftime.${nanos:0:2} > $refepochtimefile
-#        test -f "/proc/$(cat $arecordpidfile)/exe" && stat -c %Z $arecordpidfile >$refepochtimefile || exit 1
-		glg $glgopts | logscanner.sh $loggeropts > $logfile & echo $! > $loggerpidfile
+		glgsts -l $logfile -i $elogdir -r $reftime.${nanos:0:2} & echo $! > $loggerpidfile
         split_record.sh $logfile & echo $! > $splitpidfile
 
         	echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] arecord started with pid $(cat $arecordpidfile)."
@@ -93,10 +95,6 @@ record () {
 
 livecast() {
 	if [ ! -f "/proc/$(cat $darkpidfile)/exe" ];then
-		echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] Killing previous instance."
-        	
-	        test -f "/proc/$(cat $darkpidfile)/exe" -a "$modm" -eq 0 && kill -9 $(cat $darkpidfile)
-		
 		echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] Starting new instance."
 		echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] Checking connection."
 	        
@@ -115,6 +113,12 @@ livecast() {
             		
 			echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] Darkice started, stream is online, pid - $(cat $darkpidfile)"
 
+            sleep 10
+
+            test -f "/proc/$(cat $updatepidfile)/exe" || (update_icecast.sh $scannerindex $host $pass $mount $icao & echo $! > $updatepidfile)
+			
+            echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] Updating icecast."
+
             fi
     fi
 }
@@ -128,9 +132,11 @@ while (true); do
 	sec=$(date +%S)
 	modm=$(expr $min % $divm)
 #	mods=$(expr $sec % $divs)
-	recdir=$scannerhome/${yy}${mm}${dd}/ARCHIVE
+	recdir=$scannerhome/${yy}${mm}${dd}/REC
+	logdir=$scannerhome/${yy}${mm}${dd}/LOG
+    elogdir=$logdir/EXT
 	recfile=${recdir}/${yy}${mm}${dd}${hh}_SCANNER${scannerindex}_${min}.mp3
-    logfile=${recdir}/${yy}${mm}${dd}${hh}_SCANNER${scannerindex}_${min}.log
+    logfile=${logdir}/${yy}${mm}${dd}${hh}_SCANNER${scannerindex}_${min}.log
 
         if [ $modm -eq 0 -a $modf -eq 0 ]; then
 		    echo 0 > $scannerlck; sleep 1
@@ -157,11 +163,19 @@ while (true); do
 
         if [ $(cat $stopfile) == 1 ]; then
             test -f "/proc/$(cat $arecordpidfile)/exe" && kill -9 $(cat $arecordpidfile)
-            test -f "/proc/$(cat $loggerpidfile)/exe" && kill $(cat $loggerpidfile)
-            test -f "/proc/$(cat $splitpidfile)/exe" && kill $(cat $splitpidfile)
             test -f "/proc/$(cat $darkpidfile)/exe" && kill -9 $(cat $darkpidfile)
+            test -f "/proc/$(cat $loggerpidfile)/exe" && kill $(cat $loggerpidfile)
+            test -f "/proc/$(cat $updatepidfile)/exe" && kill $(cat $updatepidfile)
+            sleep 20
+            test -f "/proc/$(cat $splitpidfile)/exe" && kill $(cat $splitpidfile)
 
             exit 1
         fi
 
+        while [ $(cat $scannerlck) == 1 ]; do
+            test -f "/proc/$(cat $arecordpidfile)/exe" && kill -9 $(cat $arecordpidfile)
+            test -f "/proc/$(cat $loggerpidfile)/exe" && kill $(cat $loggerpidfile)
+            sleep 20
+            test -f "/proc/$(cat $splitpidfile)/exe" && kill $(cat $splitpidfile)
+        done
 done

@@ -23,6 +23,7 @@ s0_ihost=$(echo $scanner0 | awk -F"," '{print $5}')
 s0_ipass=$(echo $scanner0 | awk -F"," '{print $6}')
 s0_imount=$(echo $scanner0 | awk -F"," '{print $7}')
 s0_profile=$(echo $scanner0 | awk -F"," '{print $8}')
+s0_icao=$(echo $scanner0 | awk -F"," '{print $9}')
 
 test "X$s0_type" == "X" && s0_type=0
 test "X$s0_rec" == "X" && s0_rec=0
@@ -77,5 +78,5 @@ if [ $s0_type -eq 1 ]; then
 		test "X$s0_imount" == "X" && ( echo "Icecast mount not defined. Aborting."; exit 1 )
 
 	fi
-	watchdog_uniden0.sh $s0_rec $s0_port $s0_scard $s0_bitrate $s0_samplerate $s0_ihost $s0_ipass $s0_imount 1>$uwatchdoglog &
+	watchdog_uniden0.sh $s0_rec $s0_port $s0_scard $s0_bitrate $s0_samplerate $s0_ihost $s0_ipass $s0_imount $s0_icao 1>$uwatchdoglog &
 fi

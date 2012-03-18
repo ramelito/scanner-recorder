@@ -2,19 +2,23 @@
 
 scannerhome="/scanner_audio"
 scannerlog=$1
+logdir=$(dirname $1)
+elogdir=$logdir/EXT
 comma=".*,$"
-mhz=".*MHz.*"
-correction="-0.0"
+scorr="-0.2"
+ecorr="+0.1"
 fname=${scannerlog##*/}
 fname2=${fname%.*}
 yymmdd=${fname:0:8}
 hh=${fname:8:2}
 cutlinesfile="/tmp/cutlines${fname:18:1}"
 splitlog="/tmp/split${fname:18:1}.log"
-record_file="$scannerhome/${yymmdd}/ARCHIVE/${fname2}.mp3"
+record_file="$scannerhome/${yymmdd}/REC/${fname2}.mp3"
 mp3spltopts="-Q"
 numlines0=0
-
+n=0
+code=""
+uids=""
 
 echo "Waiting 60 seconds for data to begin capturing..."
 
@@ -29,20 +33,21 @@ test -f $record_file || (echo "$record_file does not exists"; exit 1 )
 while (true)	
 do
 	numlines=$(cat $scannerlog | wc -l)
-    [ $numlines -gt $numlines0 ] && let cutlines=$numlines-$numlines0+2 || cutlines=0
+    [ $numlines -gt $numlines0 ] && let cutlines=$numlines-$numlines0 || cutlines=0
     numlines0=$numlines
-    tail -n${cutlines} $scannerlog > $cutlinesfile 
+    head -n$numlines $scannerlog | tail -n${cutlines} > $cutlinesfile 
     while read line; do
-		system=$(echo $line | awk -F, '{print $1}')
-        group=$(echo $line | awk -F, '{print $2}')
-        channel=$(echo $line | awk -F, '{print $3}')
-        freq=$(echo $line | awk -F, '{print $4}')
-        r0=$(echo $line | awk -F, '{print $9}')
-        s0=$(echo $line | awk -F, '{print $10}')
-        e0=$(echo $line | awk -F, '{print $11}')
+        line=$(echo $line | sed -e 's/ /_/g')
+		system=$(echo $line | cut -d, -f 6 | sed -e 's/^_//g')
+        group=$(echo $line | cut -d, -f 7 | sed -e 's/^_//g')
+        channel=$(echo $line | cut -d, -f 8 | sed -e 's/^_//g')
+        freq=$(echo $line | cut -d, -f 2 | sed -e 's/^0*//g')
+        r0=$(echo $line | cut -d, -f 14)
+        s0=$(echo $line | cut -d, -f 15)
+        e0=$(echo $line | cut -d, -f 16)
         if [ "X$e0" != "X" ]; then
-            s=$(echo "scale=2; $s0-$r0$correction" | bc)
-            e=$(echo "scale=2; $e0-$r0$correction" | bc)
+            s=$(echo "scale=2; $s0-$r0$scorr" | bc)
+            e=$(echo "scale=2; $e0-$r0$ecorr" | bc)
 		    ss=$(echo $s | awk -F. '{print $1}')
     		sh=$(echo $s | awk -F. '{print $2}')
 	    	es=$(echo $e | awk -F. '{print $1}')
@@ -56,12 +61,42 @@ do
 	    	em=$(expr $es / 60)
 		    es=$(expr $es % 60)
     		filename_date_part=$(date -d @$s0 +%Y%m%d%H%M%S)
-	    	filename="${filename_date_part}_${freq}@t"
-	        dir1="${scannerhome}/${yymmdd}/${system}/${group}/${channel}/${hh}"
-    		test "X$group" == "X" && dir1="${scannerhome}/${yymmdd}/${system}/${freq}/${hh}"
-	    	[[ "$freq" =~ $mhz ]] || dir1="${scannerhome}/${yymmdd}/${system}/${freq}/${hh}"
-		    mp3splt $mp3spltopts $record_file $sm.$ss.$sh $em.$es.$eh -d ${dir1} -o "${filename}" 2>/dev/null
-    		echo "Splitting ${filename_date_part}_${freq}.mp3 from $record_file to ${dir1}, start $sm.$ss.$sh, end $em.$es.$eh." >> $splitlog
+            if [[ "$freq" =~ \. ]]; then
+	    	    filename="${filename_date_part}_${freq}_MHz"
+	            dir1="${scannerhome}/${yymmdd}/${system}/${group}/${channel}/${hh}"
+        		[ "X$group" == "X" ] && dir1="${scannerhome}/${yymmdd}/${system}/${freq}/${hh}"
+                test -d "$dir1" || mkdir -p "$dir1"
+                if [ -e  "$elogdir/$s0" ];then
+                    while read line; do 
+                        echo $line | cut -d, -f 9 
+                    done < "$elogdir/$s0" > "$elogdir/$s0".1
+                    code=$(cat "$elogdir/$s0".1 | sort -u | grep "$freq" | tr ' ' '\n' | sed -e '/^$/d' | grep C | tr '\n' '_' | sed -e 's/_$//g')
+                    rm "$elogdir/$s0" "$elogdir/$s0".1
+                else 
+                    echo "$elogdir/$s0 does not exists!"
+                fi
+	    	    [ "X$code" != "X" ] && filename="${filename}_${code}"
+                code=""
+            else
+	    	    filename="${filename_date_part}_${freq}_${system}"
+	            dir1="${scannerhome}/${yymmdd}/${group}/${channel}/${hh}"
+        		test "X$group" == "X" && dir1="${scannerhome}/${yymmdd}/FOUNDTGIDS/${freq}/${hh}"
+                dir1=$(echo "$dir1" | sed -e 's/\://')
+                test -d "$dir1" || mkdir -p "$dir1"
+                if [ -e "$elogdir/$s0" ]; then
+                    while read line; do
+                        echo $line | grep UID | cut -d, -f 7,9
+                    done < "$elogdir/$s0" > "$elogdir/$s0".1 
+                    uids=$(cat "$elogdir/$s0".1 | sort -u | clrsym.sed | tr ' ' '\n' | sed -e '/^$/d' | sort -u | tr '\n' '_' | sed -e 's/_$//g')
+                    rm "$elogdir/$s0" "$elogdir/$s0".1
+                else
+                    echo "$elogdir/$s0 does not exists!"
+                fi
+                [ "X$uids" != "X" ] && filename="${filename}_${uids}"
+                uids=""
+            fi
+		    mp3splt $mp3spltopts $record_file $sm.$ss.$sh $em.$es.$eh -d "${dir1}" -o "${filename}" 2>/dev/null
+            echo "Splitting ${filename}.mp3 from $record_file to ${dir1}, start $sm.$ss.$sh, end $em.$es.$eh." >> $splitlog
         fi
     done < $cutlinesfile
 	sleep 10s
