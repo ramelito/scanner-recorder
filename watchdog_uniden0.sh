@@ -85,7 +85,7 @@ record () {
         test -f $arecordpidfile || exit 1
         nanos=$(stat -c %z $arecordpidfile | awk -F. '{print $2}')
         reftime=$(stat -c %Z $arecordpidfile)
-		glgsts -l $logfile -i $elogdir -r $reftime.${nanos:0:2} & echo $! > $loggerpidfile
+		glgsts $glgopts -l $logfile -i $elogdir -r $reftime.${nanos:0:2} & echo $! > $loggerpidfile
         split_record.sh $logfile & echo $! > $splitpidfile
 
         	echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] arecord started with pid $(cat $arecordpidfile)."

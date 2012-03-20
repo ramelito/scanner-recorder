@@ -1,6 +1,9 @@
 #!/bin/bash
 set -a
 
+export LANG=C
+export PATH=/opt/bin:$PATH
+
 scannerhome="/scanner_audio"
 confpath="/opt/etc"
 conffile="record.conf"
