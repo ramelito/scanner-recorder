@@ -13,7 +13,7 @@ divm=60
 divs=60
 modf=0
 
-scannerhome="/scanner_audio"
+scannerhome="/scanner_home"
 arecordpidfile="/tmp/arecord${scannerindex}.pid"
 arecordopts="-Dplug:dsnoop${scardindex} -f S16_LE -r $samplerate -c 1 -q -t wav --process-id-file $arecordpidfile"
 lameopts="-S -m m -q9 -b $bitrate -"
@@ -25,7 +25,7 @@ loggerpidfile="/tmp/logger${scannerindex}.pid"
 splitpidfile="/tmp/split${scannerindex}.pid"
 updatepidfile="/tmp/update${scannerindex}.pid"
 stopfile="/tmp/stop${scannerindex}"
-glgopts="-d /dev/scanners/$scannerindex -t 0.8"
+glgopts="-d /dev/scanners/$scannerindex -t 0.8 -p $scannerlck"
 
 host0=$(echo $host | awk -F: '{print $1}')
 port=$(echo $host | awk -F: '{print $2}')
@@ -85,7 +85,7 @@ record () {
         test -f $arecordpidfile || exit 1
         nanos=$(stat -c %z $arecordpidfile | awk -F. '{print $2}')
         reftime=$(stat -c %Z $arecordpidfile)
-		glgsts -l $logfile -i $elogdir -r $reftime.${nanos:0:2} & echo $! > $loggerpidfile
+		glgsts $glgopts -l $logfile -i $elogdir -r $reftime.${nanos:0:2} & echo $! > $loggerpidfile
         split_record.sh $logfile & echo $! > $splitpidfile
 
         	echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] arecord started with pid $(cat $arecordpidfile)."
@@ -171,11 +171,4 @@ while (true); do
 
             exit 1
         fi
-
-        while [ $(cat $scannerlck) == 1 ]; do
-            test -f "/proc/$(cat $arecordpidfile)/exe" && kill -9 $(cat $arecordpidfile)
-            test -f "/proc/$(cat $loggerpidfile)/exe" && kill $(cat $loggerpidfile)
-            sleep 20
-            test -f "/proc/$(cat $splitpidfile)/exe" && kill $(cat $splitpidfile)
-        done
 done

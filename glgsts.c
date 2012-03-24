@@ -41,6 +41,7 @@ main (int argc, char** argv) {
 	char* sts = "STS\r";
 	int fd;	/* file descriptor for serial port */
 	FILE *fp2; /* file pointer for extensive logging */
+	FILE *fp3; /* file pointer for pause file */
 	char buffer[255]; /* buffer for data from serial port */
 	char *dbuffer; /* copy of buffer for data */
 	char *bufptr; /* var to handle getting data from serial port */
@@ -60,13 +61,17 @@ main (int argc, char** argv) {
 	char *freq; /* freq line got from serial port */
 	char *freq2="empty"; /* var for storing previous value of freq */
 	char* logfile = "/tmp/glgsts.log"; /* log file var */
-	char* logdir = "/tmp"; /* log dir to store extensive logging */
+	char* logdir = "no"; /* log dir to store extensive logging */
+	char* pausefile = "/tmp/pausefile"; /* pause file */
 	char idfile[1024]; /* id file which is assoc with start time of transmission */
 	char id[17]; /* converted to char double time var */
+	char* oldid="1.0";
 	double reftime; /* referenced time to store in logfile */
 	double delay=DELAY; /* delay var for record delay */
+	int pflag=48; /* pause flag */
+	int fp2open=0;
 
-	while ((c = getopt (argc, argv, "d:s:l:r:i:t:")) != -1)
+	while ((c = getopt (argc, argv, "d:s:l:r:i:t:p:")) != -1)
          switch (c)
            {
            case 'd':
@@ -87,8 +92,11 @@ main (int argc, char** argv) {
            case 't':
              delay = atof(optarg);
              break;
+           case 'p':
+             pausefile = optarg;
+             break;
            case '?':
-             if (optopt == 'd' || optopt == 's' || optopt == 'l' || optopt == 'r' || optopt == 'i' || optopt == 't')
+             if (optopt == 'd' || optopt == 's' || optopt == 'l' || optopt == 'r' || optopt == 'i' || optopt == 't' || optopt == 'p')
                fprintf (stderr, "Option -%c requires an argument.\n", optopt);
              else if (isprint (optopt))
                fprintf (stderr, "Unknown option `-%c'.\n", optopt);
@@ -101,7 +109,6 @@ main (int argc, char** argv) {
              abort ();
            }
 
-
 	/* opening serial port and logfile */
 	fd = open_port(device_name);
 	fp = fopen(logfile,"w");
@@ -112,6 +119,26 @@ main (int argc, char** argv) {
 
 	while (1) {	
 
+		fp3 = fopen(pausefile, "r");
+		pflag=fgetc(fp3);
+		fclose(fp3);
+
+		if ( pflag == 49 && rec == 1 ) {
+			gettimeofday(&tmval, NULL);
+			time=tmval.tv_sec + (tmval.tv_usec/1000000.0);
+
+			fprintf (fp, "%.2f\n", time ); 
+			fflush(fp);
+
+			rec=0;
+		}
+
+		if ( pflag == 49 ) {
+
+			usleep(timeout);
+			continue;
+		}
+		
 		/* odd step - glg command, even - sts command */
 		if ( i % 2 == 0 ) {
 			r=write(fd, glg, 4);
@@ -140,14 +167,25 @@ main (int argc, char** argv) {
 		if (nl) *nl = '\0';
 		
 		/* if recording is on and sts command output data to file with start time id */
-		if (rec==1 && i % 2 == 1) {
-			*idfile='\0';
-			strcat(idfile,logdir);
-			strcat(idfile,"/");
-			strcat(idfile,id);
-			fp2 = fopen(idfile,"a+");
+		if (rec==1 && i % 2 == 1 && strcmp(logdir,"no") !=0 ) {
+			if ( strcmp(id,oldid) != 0 ) {
+				if (fp2open == 1 ) fclose(fp2);
+				*idfile='\0';
+				strcat(idfile,logdir);
+				strcat(idfile,"/");
+				strcat(idfile,id);
+				fp2 = fopen(idfile,"a+");
+				fp2open=1;
+			}
 			fprintf(fp2, "%s\n", buffer);
-			fclose(fp2);
+			oldid=strdup(id);
+		}
+
+		if ( rec==0 && i % 2 == 1 && strcmp(logdir,"no") !=0 ) {
+			if (fp2open == 1) {
+				fclose(fp2);
+				fp2open=0;
+			}
 		}
 
 		if ( i % 2 == 0 ) {
@@ -203,13 +241,15 @@ main (int argc, char** argv) {
 			/* squelch is opened */
 			if (sql==1) {
 				/* switched transmission when it is delay initiated */
-				if (strcmp(freq,freq2) !=0 && rec==1 || strcmp(freq,freq2) && timer > 0.0 ) {
+				if (strcmp(freq,freq2) !=0 && rec==1 || strcmp(freq,freq2) !=0 && timer > 0.0 ) {
 					rec=0;
 					fprintf (fp, "%.2f\n", time ); 
+					fflush(fp);
 				}
 				/* new transmission ever */
 				if (strcmp(freq,freq2) !=0 || rec==0 ) {
 					fprintf (fp, "%s,%.2f,%.2f,", buffer, reftime, time);
+					fflush(fp);
 					rec=1;
 					sprintf(id, "%.2f", time);
 				}
@@ -220,7 +260,6 @@ main (int argc, char** argv) {
 		}
 
 		*buffer='\0';
-		fflush(fp);
 		i++;
 	}
 
