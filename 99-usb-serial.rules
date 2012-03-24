@@ -1,5 +1,1 @@
-#KERNELS=="ttyUSB[0-9]", ACTION=="add", SYMLINK+="scanner%n", RUN+="/opt/bin/detect_scanner.sh %n &"
-
 KERNELS=="ttyUSB[0-9]", ACTION=="add", PROGRAM="/opt/bin/usb_port_no.sh %p", SYMLINK+="scanners/%c"
-
-KERNELS=="ttyUSB[0-9]", ACTION=="remove", PROGRAM="/opt/bin/usb_port_no.sh %p", RUN+="/opt/bin/stop_record.sh %c"
