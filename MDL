@@ -2,9 +2,6 @@
 
 export PATH=/opt/bin:$PATH
 
-scannerindex=0
-arch=$(uname -m)
-
 args=`getopt s: $*`
 if test $? != 0
      then
@@ -16,13 +13,16 @@ for i
 do
   case "$i" in
         -s) shift;scannerindex=$1;shift;;
-        -a) shift;arch=$1;shift;
   esac
 done
 
-readscanner="readscanner -d /dev/scanners/$scannerindex"
+test -e /dev/scanners/$scannerindex || exit 1
+
 scannerlck="/tmp/scanner$scannerindex.lck"
 
-res=`$readscanner -c MDL -s 50000 | sed -e 's///'`
+exec 3<> /dev/scanners/$scannerindex
 
-echo $res
+echo -ne "MDL\r" >&3
+read  -e -t 1 res <&3
+echo "$res"
+exec 3>&-
