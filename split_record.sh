@@ -19,6 +19,7 @@ numlines0=0
 n=0
 code=""
 uids=""
+mindur=250
 
 echo "Waiting 60 seconds for data to begin capturing..."
 
@@ -46,6 +47,12 @@ do
         s0=$(echo $line | cut -d, -f 15)
         e0=$(echo $line | cut -d, -f 16)
         if [ "X$e0" != "X" ]; then
+		d0=$(echo "($e0-$s0)*100" | bc)
+                d0=$(echo $d0 | cut -d. -f 1)
+                if [ $d0 -le $mindur ]; then
+                    rm "$elogdir/$s0" 
+                    continue
+                fi
             s=$(echo "scale=2; $s0-$r0$scorr" | bc)
             e=$(echo "scale=2; $e0-$r0$ecorr" | bc)
 		    ss=$(echo $s | awk -F. '{print $1}')
@@ -87,7 +94,7 @@ do
                     while read line; do
                         echo $line | grep UID | cut -d, -f 7,9
                     done < "$elogdir/$s0" > "$elogdir/$s0".1 
-                    uids=$(cat "$elogdir/$s0".1 | sort -u | clrsym.sed | tr ' ' '\n' | sed -e '/^$/d' | sort -u | tr '\n' '_' | sed -e 's/_$//g')
+                    uids=$(cat "$elogdir/$s0".1 | clrsym.sed | tr ' ' '\n' | sed -e '/^$/d' | sed -e "/\b$freq\b/d" | uniq | tr '\n' '_' | sed -e 's/_$//g')
                     rm "$elogdir/$s0" "$elogdir/$s0".1
                 else
                     echo "$elogdir/$s0 does not exists!"
