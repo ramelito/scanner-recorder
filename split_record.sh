@@ -106,5 +106,5 @@ do
             echo "Splitting ${filename}.mp3 from $record_file to ${dir1}, start $sm.$ss.$sh, end $em.$es.$eh." >> $splitlog
         fi
     done < $cutlinesfile
-	sleep 10s
+	sleep 3s
 done

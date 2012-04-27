@@ -61,6 +61,7 @@ fi
 if [ $s0_type -eq 1 ]; then
 	echo "Scanner is controlled."
 	while (true); do
+        test -L /dev/scanners/$s0_port && stty -F /dev/scanners/$s0_port 115200 raw
 		test -L /dev/scanners/$s0_port && res=$(MDL -s$s0_port)
 		echo $res
 		if [[ "$res" =~ $mdl ]]; then
@@ -78,5 +79,8 @@ if [ $s0_type -eq 1 ]; then
 		test "X$s0_imount" == "X" && ( echo "Icecast mount not defined. Aborting."; exit 1 )
 
 	fi
+
+    sleep 20
+
 	watchdog_uniden0.sh $s0_rec $s0_port $s0_scard $s0_bitrate $s0_samplerate $s0_ihost $s0_ipass $s0_imount $s0_icao 1>$uwatchdoglog &
 fi

@@ -13,7 +13,7 @@ divm=60
 divs=60
 modf=0
 
-scannerhome="/scanner_home"
+scannerhome="/scanner_audio"
 arecordpidfile="/tmp/arecord${scannerindex}.pid"
 arecordopts="-Dplug:dsnoop${scardindex} -f S16_LE -r $samplerate -c 1 -q -t wav --process-id-file $arecordpidfile"
 lameopts="-S -m m -q9 -b $bitrate -"
@@ -142,6 +142,7 @@ while (true); do
 		    echo 0 > $scannerlck; sleep 1
             test -f "/proc/$(cat $arecordpidfile)/exe" && kill -9 $(cat $arecordpidfile)
             test -f "/proc/$(cat $loggerpidfile)/exe" && kill $(cat $loggerpidfile)
+            sleep 5s
             test -f "/proc/$(cat $splitpidfile)/exe" && kill $(cat $splitpidfile)
             modf=1
         fi
@@ -156,7 +157,7 @@ while (true); do
 
     	esac
     	
-        sleep 20
+        sleep 15s
 
         [ $modm -ne 0 ] && modf=0
 #		echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] DEBUG: Timing $modm $modf."
@@ -166,9 +167,8 @@ while (true); do
             test -f "/proc/$(cat $darkpidfile)/exe" && kill -9 $(cat $darkpidfile)
             test -f "/proc/$(cat $loggerpidfile)/exe" && kill $(cat $loggerpidfile)
             test -f "/proc/$(cat $updatepidfile)/exe" && kill $(cat $updatepidfile)
-            sleep 20
             test -f "/proc/$(cat $splitpidfile)/exe" && kill $(cat $splitpidfile)
-
+            sleep 5s
             exit 1
         fi
 done
