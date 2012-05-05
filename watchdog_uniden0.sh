@@ -131,12 +131,14 @@ while (true); do
 	min=$(date +%M)
 	sec=$(date +%S)
 	modm=$(expr $min % $divm)
-#	mods=$(expr $sec % $divs)
+    modm5=$(expr $min % 5)
 	recdir=$scannerhome/${yy}${mm}${dd}/REC
 	logdir=$scannerhome/${yy}${mm}${dd}/LOG
     elogdir=$logdir/EXT
 	recfile=${recdir}/${yy}${mm}${dd}${hh}_SCANNER${scannerindex}_${min}.mp3
     logfile=${logdir}/${yy}${mm}${dd}${hh}_SCANNER${scannerindex}_${min}.log
+
+        [ $modm5 -eq 0 ] && /opt/bin/usbreset.sh $scannerindex
 
         if [ $modm -eq 0 -a $modf -eq 0 ]; then
 		    echo 0 > $scannerlck; sleep 1

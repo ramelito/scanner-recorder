@@ -8,6 +8,7 @@ scannerhome="/scanner_audio"
 confpath="/opt/etc"
 conffile="record.conf"
 envpath="/tmp/env.txt"
+asound="/etc/asound.conf"
 
 echo "DEBUG: checking and sourcing config..."
 
@@ -21,6 +22,8 @@ env > $envpath
 echo "DEBUG: entering loop to run record0.sh."
 
 num=$(cat $envpath | grep scanner[0-9] | wc -l)
+
+echo "" > $asound
 
 for i in $(seq 1 $num); do
         params=$(eval   "echo \$$( echo scanner${i})")

@@ -20,9 +20,14 @@ test -e /dev/scanners/$scannerindex || exit 1
 
 scannerlck="/tmp/scanner$scannerindex.lck"
 
+echo 1 > $scannerlck
+sleep 0.5
+
 exec 3<> /dev/scanners/$scannerindex
 
 echo -ne "MDL\r" >&3
 read  -e -t 1 res <&3
 echo "$res"
 exec 3>&-
+
+echo 0 > $scannerlck

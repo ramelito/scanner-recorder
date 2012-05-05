@@ -7,6 +7,7 @@ res=""
 mdl="^MDL*"
 watchdoglog="/tmp/watchdog.log"
 uwatchdoglog="/tmp/uwatchdog.log"
+asound="/etc/asound.conf"
 
 type -P arecord &>/dev/null || ( echo "No arecord utility is installed. Install alsa-utils."; exit 1 )
 type -P lame &>/dev/null || ( echo "No lame utility is installed. Install lame."; exit 1 )
@@ -29,6 +30,37 @@ test "X$s0_type" == "X" && s0_type=0
 test "X$s0_rec" == "X" && s0_rec=0
 test "X$s0_scard" == "X" && s0_card=0
 #[ $(arecord -l | grep "card $s0_scard:" | wc -l) -eq 1 ] || ( echo "Card $s0_scard does not exist."; exit 1 )
+
+ipckey=$(cat /dev/urandom|od -N2 -An -i)
+if [ $s0_scard -eq 0 ]; then
+    echo "pcm.dsnoop0 {
+        type dsnoop
+            ipc_key $ipckey
+            slave {
+            pcm {
+                type hw
+                card omap3beagle
+                device 0
+            }
+            rate 16000
+            channels 1
+        }
+    } " >> $asound
+else
+    echo "pcm.dsnoop$s0_scard {
+        type dsnoop
+            ipc_key $ipckey
+            slave {
+            pcm {
+                type hw
+                card USBSOUND$s0_scard
+                device 0
+            }
+            rate 16000
+            channels 1
+        }
+    } " >> $asound
+fi
 
 case "$s0_profile" in
         lq)

@@ -1,10 +1,20 @@
 #!/bin/bash
 
+PATH=/sbin:/bin:/usr/sbin:/usr/bin:/opt/bin:/usr/local/sbin:/usr/local/bin
+export PATH
+
 scannerhome="/scanner_audio"
 test -f /scanner_audio/record.conf && cp /scanner_audio/record.conf /opt/etc/
 test -f /opt/etc/record.conf && source /opt/etc/record.conf || ( echo "File record.conf not found in /opt/etc."; exit 1 )
 config="/opt/etc/record.conf"
 clearlist=/tmp/clearlist
+busy=/tmp/recordcleaner.lck
+
+touch $busy
+
+[ "$(cat $busy)" == "1" ] && exit 0
+
+echo 1 > $busy
 
 s0_profile=$(echo $scanner0 | awk -F";" '{print $8}')
 
@@ -37,6 +47,11 @@ let bytes=kbytes*1024
 
 echo "Now we have $bytes free bytes."
 
+if [ $bytes -ge $onehourleft ]; then
+    echo 0 > $busy; 
+    exit 0
+fi
+
 find . -printf "%A@ %p\n" | sort -n > $clearlist
 
 while [ $bytes -lt $onehourleft ]; do
@@ -62,3 +77,5 @@ while [ $bytes -lt $onehourleft ]; do
     fi
     sed -i".bak" '1d' $clearlist
 done
+
+echo 0 > $busy
