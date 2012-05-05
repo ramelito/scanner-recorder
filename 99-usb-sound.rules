@@ -1,9 +1,1 @@
-SUBSYSTEM!="sound", GOTO="my_usb_audio_end"
-ACTION!="add", GOTO="my_usb_audio_end"
-
-DEVPATH=="/devices/platform/usbhs-omap.0/ehci-omap.0/usb1/1-2/1-2.2/1-2.2:1.0/sound/card?", ATTR{id}="USB1"
-DEVPATH=="/devices/platform/usbhs-omap.0/ehci-omap.0/usb1/1-2/1-2.3/1-2.3:1.0/sound/card?", ATTR{id}="USB2"
-DEVPATH=="/devices/platform/usbhs-omap.0/ehci-omap.0/usb1/1-2/1-2.4/1-2.4:1.0/sound/card?", ATTR{id}="USB3"
-DEVPATH=="/devices/platform/usbhs-omap.0/ehci-omap.0/usb1/1-2/1-2.5/1-2.5:1.0/sound/card?", ATTR{id}="USB4"
-
-LABEL="my_usb_audio_end"
+KERNELS=="card[1-9]", ACTION=="add", PROGRAM="/opt/bin/usb_port_no.pm %p", ATTR{id}="USBSOUND%c"
