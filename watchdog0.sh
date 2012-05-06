@@ -13,7 +13,7 @@ divs=60
 scannerhome="/scanner_audio"
 #scannerhome="/tmp"
 arecordpidfile="/tmp/arecord${scannerindex}.pid"
-arecordopts="-Dplughw:${scannerindex},0 -f S16_LE -r $samplerate -c 1 -q -t wav --process-id-file $arecordpidfile"
+arecordopts="-Dplug:dsnoop${scardindex} -f S16_LE -r $samplerate -c 1 -q -t wav --process-id-file $arecordpidfile"
 lameopts="-S -m m -q9 -b $bitrate -"
 mp3spltopts="-s -p th=-50,min=2,trackmin=1,rm -Q -N"
 mp3spltpidfile="/tmp/mp3splt${scannerindex}.pid"
@@ -39,7 +39,7 @@ gendarkconf () {
         reconnect       = yes
 
         [input] 
-        device          = plughw:${scannerindex},0
+        device          = plug:dsnoop${scardindex}
         sampleRate      = $samplerate
         bitsPerSample   = 16
         channel         = 1
