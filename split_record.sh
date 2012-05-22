@@ -78,7 +78,8 @@ do
                         echo $line | cut -d, -f 9 
                     done < "$elogdir/$s0" > "$elogdir/$s0".1
                     code=$(cat "$elogdir/$s0".1 | sort -u | grep "$freq" | tr ' ' '\n' | sed -e '/^$/d' | grep C | tr '\n' '_' | sed -e 's/_$//g')
-                    rm "$elogdir/$s0" "$elogdir/$s0".1
+                    rm "$elogdir/$s0" 
+                    [ -e "$elogdir/$s0".1 ] && rm "logdir/$s0".1
                 else 
                     echo "$elogdir/$s0 does not exists!"
                 fi
@@ -95,7 +96,8 @@ do
                         echo $line | grep UID | cut -d, -f 7,9
                     done < "$elogdir/$s0" > "$elogdir/$s0".1 
                     uids=$(cat "$elogdir/$s0".1 | clrsym.sed | tr ' ' '\n' | sed -e '/^$/d' | sed -e "/\b$freq\b/d" | uniq | tr '\n' '_' | sed -e 's/_$//g')
-                    rm "$elogdir/$s0" "$elogdir/$s0".1
+                    rm "$elogdir/$s0"
+                    [ -e "$elogdir/$s0".1 ] && rm "logdir/$s0".1
                 else
                     echo "$elogdir/$s0 does not exists!"
                 fi
