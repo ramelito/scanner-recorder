@@ -50,7 +50,7 @@ do
 		d0=$(echo "($e0-$s0)*100" | bc)
                 d0=$(echo $d0 | cut -d. -f 1)
                 if [ $d0 -le $mindur ]; then
-                    rm "$elogdir/$s0" 
+                    [ -e "logdir/$s0" ] && rm "$elogdir/$s0" 
                     continue
                 fi
             s=$(echo "scale=2; $s0-$r0$scorr" | bc)
