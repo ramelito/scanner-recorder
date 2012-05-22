@@ -8,13 +8,17 @@ test -f /scanner_audio/record.conf && cp /scanner_audio/record.conf /opt/etc/
 test -f /opt/etc/record.conf && source /opt/etc/record.conf || ( echo "File record.conf not found in /opt/etc."; exit 1 )
 config="/opt/etc/record.conf"
 clearlist=/tmp/clearlist
-busy=/tmp/recordcleaner.lck
+pid=/tmp/recordcleaner.pid
 
-touch $busy
+test -f $pid || touch $pid
 
-[ "$(cat $busy)" == "1" ] && exit 0
+echo "Checking recordcleaner is working..."
 
-echo 1 > $busy
+test -f "/proc/$(cat $pid)/exe" && exit 0
+
+echo "Recordcleaner not running. Let's run it!"
+
+echo $$ > $pid
 
 s0_profile=$(echo $scanner0 | awk -F";" '{print $8}')
 
@@ -36,9 +40,13 @@ case "$s0_profile" in
 
 let onehourleft=bitrate*3600*1000/8
 
+echo "We should get at least $onehourleft bytes."
+
 if [ -f $config ]; then
 	source $config
 fi
+
+echo "Entering $scannerhome ... "
 
 cd $scannerhome
 
@@ -47,12 +55,15 @@ let bytes=kbytes*1024
 
 echo "Now we have $bytes free bytes."
 
-if [ $bytes -ge $onehourleft ]; then
-    echo 0 > $busy; 
-    exit 0
-fi
+echo "Check if $bytes greater or equal $onehourleft bytes ... "
+
+[ $bytes -ge $onehourleft ] && exit 0
+
+echo "Building clearlist of files ..."
 
 find . -printf "%A@ %p\n" | sort -n > $clearlist
+
+echo "Reading clearlist until free needed space."
 
 while [ $bytes -lt $onehourleft ]; do
 	file=$(cat $clearlist | head -1 | awk -F" " '{print $2}')
@@ -75,7 +86,9 @@ while [ $bytes -lt $onehourleft ]; do
             rmdir $file
 	    fi
     fi
-    sed -i".bak" '1d' $clearlist
+    echo "Sedding clearlist to remove already checked $file ..."
+    lines=$(cat $clearlist | wc -l)
+    let "lines--"
+    tail -n$lines $clearlist > $clearlist.1
+    mv $clearlist.1 $clearlist
 done
-
-echo 0 > $busy
