@@ -38,7 +38,7 @@ case "$s0_profile" in
         esac
 
 
-let onehourleft=bitrate*3600*1000/8
+let onehourleft=2*4*bitrate*3600*1000/8
 
 echo "We should get at least $onehourleft bytes."
 
@@ -70,8 +70,6 @@ while [ $bytes -lt $onehourleft ]; do
     if [ ! -d $file ]; then
         rm $file
 	    echo "Removing file $file."
-	    tail -n+2 $clearlist > ${clearlist}.new
-	    mv ${clearlist}.new $clearlist
 	    kbytes=$(df . | tail -1 | awk -F" " '{print $4}')
 	    let bytes=kbytes*1024
 	    echo "After deleting $file we have $bytes free bytes."
@@ -86,9 +84,6 @@ while [ $bytes -lt $onehourleft ]; do
             rmdir $file
 	    fi
     fi
-    echo "Sedding clearlist to remove already checked $file ..."
-    lines=$(cat $clearlist | wc -l)
-    let "lines--"
-    tail -n$lines $clearlist > $clearlist.1
-    mv $clearlist.1 $clearlist
+	tail -n+2 $clearlist > ${clearlist}.new
+	mv ${clearlist}.new $clearlist
 done
