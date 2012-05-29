@@ -74,15 +74,13 @@ do
         		[ "X$group" == "X" ] && dir1="${scannerhome}/${yymmdd}/${system}/${freq}/${hh}"
                 test -d "$dir1" || mkdir -p "$dir1"
                 [ -s "$elogdir/$s0" ] || sleep 1m
-                if [ -e  "$elogdir/$s0" -a -s "$elogdir/$s0" ];then
+                if [ -s "$elogdir/$s0" ];then
                     echo "Extracting code. File $elogdir/$s0, size $(stat -c %s $elogdir/$s0)."
                     cut -d, -f 9 "$elogdir/$s0" > "$elogdir/$s0".1
                     code=$(cat "$elogdir/$s0".1 | sort -u | grep "$freq" | tr ' ' '\n' | sed -e '/^$/d' | grep C | tr '\n' '_' | sed -e 's/_$//g')
-                     rm "$elogdir/$s0" 
-                    [ -e "$elogdir/$s0".1 ] && rm "$elogdir/$s0".1
-                else 
-                    echo "$elogdir/$s0 does not exists!"
                 fi
+                [ -e "$elogdir/$s0" ] && rm "$elogdir/$s0"
+                [ -e "$elogdir/$s0".1 ] && rm "$elogdir/$s0".1
 	    	    [ "X$code" != "X" ] && filename="${filename}_${code}"
                 code=""
             else
@@ -92,14 +90,12 @@ do
                 dir1=$(echo "$dir1" | sed -e 's/\://')
                 test -d "$dir1" || mkdir -p "$dir1"
                 [ -s "$elogdir/$s0" ] || sleep 1m
-                if [ -e "$elogdir/$s0" -a -s "$elogdir/$s0" ]; then
+                if [ -s "$elogdir/$s0" ]; then
                     cut -d, -f 7,9 "$elogdir/$s0" | grep UID > "$elogdir/$s0".1 
                     uids=$(cat "$elogdir/$s0".1 | clrsym.sed | tr ' ' '\n' | sed -e '/^$/d' | sed -e "/\b$freq\b/d" | uniq | tr '\n' '_' | sed -e 's/_$//g')
-                    rm "$elogdir/$s0"
-                    [ -e "$elogdir/$s0".1 ] && rm "$elogdir/$s0".1
-                else
-                    echo "$elogdir/$s0 does not exists!"
                 fi
+                [ -e "$elogdir/$s0" ] && rm "$elogdir/$s0"
+                [ -e "$elogdir/$s0".1 ] && rm "$elogdir/$s0".1
                 [ "X$uids" != "X" ] && filename="${filename}_${uids}"
                 uids=""
             fi
