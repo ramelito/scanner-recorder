@@ -5,10 +5,12 @@ scannerindex=$2
 scardindex=$3
 bitrate=$4
 samplerate=$5
-host=$6
-pass=$7
-mount=$8
-icao=$9
+scor=$6
+ecor=$7
+host=$8
+pass=$9
+mount=${10}
+icao=${11}
 divm=60
 divs=60
 modf=0
@@ -86,7 +88,7 @@ record () {
         nanos=$(stat -c %z $arecordpidfile | awk -F. '{print $2}')
         reftime=$(stat -c %Z $arecordpidfile)
 		glgsts $glgopts -l $logfile -i $elogdir -r $reftime.${nanos:0:2} & echo $! > $loggerpidfile
-        split_record.sh $logfile & echo $! > $splitpidfile
+        split_record.sh $logfile $scor $ecor & echo $! > $splitpidfile
 
         	echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] arecord started with pid $(cat $arecordpidfile)."
 		
@@ -97,7 +99,8 @@ livecast() {
 	if [ ! -f "/proc/$(cat $darkpidfile)/exe" ];then
 		echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] Starting new instance."
 		echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] Checking connection."
-	        
+	       
+            echo "http://source:$pass@$host/admin/listclients?mount=/$mount"
 		res=$(curl -s http://source:$pass@$host/admin/listclients?mount=/$mount)
         	echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] Result: $res."
 	        if [[ "$res" =~ "<b>Source does not exist</b>" ]];then

@@ -4,8 +4,8 @@ scannerhome="/scanner_audio"
 scannerlog=$1
 logdir=$(dirname $1)
 comma=".*,$"
-scorr="-0.2"
-ecorr="+0.1"
+scorr="$2"
+ecorr="$3"
 fname=${scannerlog##*/}
 fname2=${fname%.*}
 yymmdd=${fname:0:8}
@@ -21,6 +21,7 @@ code=""
 uids=""
 mindur=250
 
+echo "Printing config parameters $1 $2 $3"
 echo "Waiting 60 seconds for data to begin capturing..."
 
 sleep 60

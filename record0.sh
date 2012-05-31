@@ -16,19 +16,23 @@ type -P mp3splt &>/dev/null || ( echo "No mp3splt utility is installed. Install 
 
 scanner0=$1
 
-s0_type=$(echo $scanner0 | awk -F"," '{print $1}')
-s0_port=$(echo $scanner0 | awk -F"," '{print $2}')
-s0_scard=$(echo $scanner0 | awk -F"," '{print $3}')
-s0_rec=$(echo $scanner0 | awk -F"," '{print $4}')
-s0_ihost=$(echo $scanner0 | awk -F"," '{print $5}')
-s0_ipass=$(echo $scanner0 | awk -F"," '{print $6}')
-s0_imount=$(echo $scanner0 | awk -F"," '{print $7}')
-s0_profile=$(echo $scanner0 | awk -F"," '{print $8}')
-s0_icao=$(echo $scanner0 | awk -F"," '{print $9}')
+s0_type=$(echo $scanner0 | cut -d, -f1)
+s0_port=$(echo $scanner0 | cut -d, -f2)
+s0_scard=$(echo $scanner0 | cut -d, -f3)
+s0_rec=$(echo $scanner0 | cut -d, -f4)
+s0_ihost=$(echo $scanner0 | cut -d, -f5)
+s0_ipass=$(echo $scanner0 | cut -d, -f6)
+s0_imount=$(echo $scanner0 | cut -d, -f7)
+s0_profile=$(echo $scanner0 | cut -d, -f8)
+s0_icao=$(echo $scanner0 | cut -d, -f9)
+s0_scor=$(echo $scanner0 | cut -d, -f10)
+s0_ecor=$(echo $scanner0 | cut -d, -f11)
 
 test "X$s0_type" == "X" && s0_type=0
 test "X$s0_rec" == "X" && s0_rec=0
 test "X$s0_scard" == "X" && s0_card=0
+test "X$s0_scor" == "X" && s0_scor=0
+test "X$s0_ecor" == "X" && s0_ecor=0
 #[ $(arecord -l | grep "card $s0_scard:" | wc -l) -eq 1 ] || ( echo "Card $s0_scard does not exist."; exit 1 )
 
 ipckey=$(cat /dev/urandom|od -N2 -An -i)
@@ -114,5 +118,5 @@ if [ $s0_type -eq 1 ]; then
 
     sleep 20
 
-	watchdog_uniden0.sh $s0_rec $s0_port $s0_scard $s0_bitrate $s0_samplerate $s0_ihost $s0_ipass $s0_imount $s0_icao 1>$uwatchdoglog &
+	watchdog_uniden0.sh $s0_rec $s0_port $s0_scard $s0_bitrate $s0_samplerate $s0_scor $s0_ecor $s0_ihost $s0_ipass $s0_imount $s0_icao 1>$uwatchdoglog &
 fi
