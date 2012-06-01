@@ -178,6 +178,7 @@ main (int argc, char** argv) {
 				fp2open=1;
 			}
 			fprintf(fp2, "%s\n", buffer);
+            fflush(fp2);
 			oldid=strdup(id);
 		}
 

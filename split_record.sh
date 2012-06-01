@@ -6,6 +6,8 @@ logdir=$(dirname $1)
 comma=".*,$"
 scorr="$2"
 ecorr="$3"
+mindur=$(echo "$4*1000" | bc)
+mindur=$(echo $mindur | cut -d. -f1)
 fname=${scannerlog##*/}
 fname2=${fname%.*}
 yymmdd=${fname:0:8}
@@ -19,7 +21,6 @@ numlines0=0
 n=0
 code=""
 uids=""
-mindur=250
 
 echo "Printing config parameters $1 $2 $3"
 echo "Waiting 60 seconds for data to begin capturing..."
@@ -48,7 +49,7 @@ do
         s0=$(echo $line | cut -d, -f 15)
         e0=$(echo $line | cut -d, -f 16)
         if [ "X$e0" != "X" ]; then
-		d0=$(echo "($e0-$s0)*100" | bc)
+		d0=$(echo "($e0-$s0)*1000" | bc)
                 d0=$(echo $d0 | cut -d. -f 1)
                 if [ $d0 -le $mindur ]; then
                     [ -e "$elogdir/$s0" ] && rm "$elogdir/$s0" 
@@ -74,7 +75,7 @@ do
 	            dir1="${scannerhome}/${yymmdd}/${system}/${group}/${channel}/${hh}"
         		[ "X$group" == "X" ] && dir1="${scannerhome}/${yymmdd}/${system}/${freq}/${hh}"
                 test -d "$dir1" || mkdir -p "$dir1"
-                [ -s "$elogdir/$s0" ] || sleep 1m
+                [ -s "$elogdir/$s0" ] || sleep 3s
                 if [ -s "$elogdir/$s0" ];then
                     echo "Extracting code. File $elogdir/$s0, size $(stat -c %s $elogdir/$s0)."
                     cut -d, -f 9 "$elogdir/$s0" > "$elogdir/$s0".1
@@ -90,7 +91,7 @@ do
         		test "X$group" == "X" && dir1="${scannerhome}/${yymmdd}/FOUNDTGIDS/${freq}/${hh}"
                 dir1=$(echo "$dir1" | sed -e 's/\://')
                 test -d "$dir1" || mkdir -p "$dir1"
-                [ -s "$elogdir/$s0" ] || sleep 1m
+                [ -s "$elogdir/$s0" ] || sleep 3s
                 if [ -s "$elogdir/$s0" ]; then
                     cut -d, -f 7,9 "$elogdir/$s0" | grep UID > "$elogdir/$s0".1 
                     uids=$(cat "$elogdir/$s0".1 | clrsym.sed | tr ' ' '\n' | sed -e '/^$/d' | sed -e "/\b$freq\b/d" | uniq | tr '\n' '_' | sed -e 's/_$//g')

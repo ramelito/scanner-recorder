@@ -7,10 +7,12 @@ bitrate=$4
 samplerate=$5
 scor=$6
 ecor=$7
-host=$8
-pass=$9
-mount=${10}
-icao=${11}
+delay=$8
+mindur=$9
+host=${10}
+pass=${11}
+mount=${12}
+icao=${13}
 divm=60
 divs=60
 modf=0
@@ -27,7 +29,8 @@ loggerpidfile="/tmp/logger${scannerindex}.pid"
 splitpidfile="/tmp/split${scannerindex}.pid"
 updatepidfile="/tmp/update${scannerindex}.pid"
 stopfile="/tmp/stop${scannerindex}"
-glgopts="-d /dev/scanners/$scannerindex -t 0.8 -p $scannerlck"
+glgopts="-d /dev/scanners/$scannerindex -t $delay -p $scannerlck"
+elogdir="/tmp/EXT_${scannerindex}"
 
 host0=$(echo $host | awk -F: '{print $1}')
 port=$(echo $host | awk -F: '{print $2}')
@@ -88,7 +91,7 @@ record () {
         nanos=$(stat -c %z $arecordpidfile | awk -F. '{print $2}')
         reftime=$(stat -c %Z $arecordpidfile)
 		glgsts $glgopts -l $logfile -i $elogdir -r $reftime.${nanos:0:2} & echo $! > $loggerpidfile
-        split_record.sh $logfile $scor $ecor & echo $! > $splitpidfile
+        split_record.sh $logfile $scor $ecor $mindur & echo $! > $splitpidfile
 
         	echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] arecord started with pid $(cat $arecordpidfile)."
 		
@@ -137,7 +140,7 @@ while (true); do
     modm5=$(expr $min % 5)
 	recdir=$scannerhome/${yy}${mm}${dd}/REC
 	logdir=$scannerhome/${yy}${mm}${dd}/LOG
-    elogdir=$logdir/EXT
+#   elogdir=$logdir/EXT
 	recfile=${recdir}/${yy}${mm}${dd}${hh}_SCANNER${scannerindex}_${min}.mp3
     logfile=${logdir}/${yy}${mm}${dd}${hh}_SCANNER${scannerindex}_${min}.log
 
