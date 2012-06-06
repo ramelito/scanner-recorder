@@ -9,14 +9,16 @@ scor=$6
 ecor=$7
 delay=$8
 mindur=$9
-host=${10}
-pass=${11}
-mount=${12}
-icao=${13}
+timez=${10}
+host=${11}
+pass=${12}
+mount=${13}
+icao=${14}
 divm=60
 divs=60
 modf=0
 
+export TZ=$timez
 scannerhome="/scanner_audio"
 arecordpidfile="/tmp/arecord${scannerindex}.pid"
 arecordopts="-Dplug:dsnoop${scardindex} -f S16_LE -r $samplerate -c 1 -q -t wav --process-id-file $arecordpidfile"
@@ -128,6 +130,9 @@ livecast() {
             fi
     fi
 }
+
+echo "Checking timezone - $timez."
+date
 
 while (true); do
 	yy=$(date +%Y)

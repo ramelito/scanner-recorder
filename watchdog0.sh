@@ -4,12 +4,14 @@ uopt=$1
 scannerindex=$2
 bitrate=$3
 samplerate=$4
-host=$5
-pass=$6
-mount=$7
+timez=$5
+host=$6
+pass=$7
+mount=$8
 divm=60
 divs=60
 
+export TZ=$timez
 scannerhome="/scanner_audio"
 #scannerhome="/tmp"
 arecordpidfile="/tmp/arecord${scannerindex}.pid"

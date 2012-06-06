@@ -28,7 +28,8 @@ s0_icao=$(echo $scanner0 | cut -d, -f9)
 s0_scor=$(echo $scanner0 | cut -d, -f10)
 s0_ecor=$(echo $scanner0 | cut -d, -f11)
 s0_delay=$(echo $scanner0 | cut -d, -f12)
-s0_mindur=$(echo $scanner0 | cut -d, f13)
+s0_mindur=$(echo $scanner0 | cut -d, -f13)
+s0_timez=$(echo $scanner0 | cut -d, -f14)
 
 test "X$s0_type" == "X" && s0_type=0
 test "X$s0_rec" == "X" && s0_rec=0
@@ -37,6 +38,7 @@ test "X$s0_scor" == "X" && s0_scor=0
 test "X$s0_ecor" == "X" && s0_ecor=0
 test "X$s0_delay" == "X" && s0_delay="0.8"
 test "X$s0_min" == "X" && s0_min="2.5"
+test "Xs0_timez" == "X" && s0_timez="UTC"
 #[ $(arecord -l | grep "card $s0_scard:" | wc -l) -eq 1 ] || ( echo "Card $s0_scard does not exist."; exit 1 )
 
 ipckey=$(cat /dev/urandom|od -N2 -An -i)
@@ -95,7 +97,7 @@ if [ $s0_type -eq 0 ]; then
 		test "X$s0_imount" == "X" && ( echo "Icecast mount not defined. Aborting."; exit 1 )
 
 	fi
-	watchdog0.sh $s0_rec $s0_scard $s0_bitrate $s0_samplerate $s0_ihost $s0_ipass $s0_imount 1>$watchdoglog &
+	watchdog0.sh $s0_rec $s0_scard $s0_bitrate $s0_samplerate $s0_timez $s0_ihost $s0_ipass $s0_imount 1>$watchdoglog &
 fi
 
 if [ $s0_type -eq 1 ]; then
@@ -122,5 +124,5 @@ if [ $s0_type -eq 1 ]; then
 
     sleep 20
 
-	watchdog_uniden0.sh $s0_rec $s0_port $s0_scard $s0_bitrate $s0_samplerate $s0_scor $s0_ecor $s0_delay $s0_mindur $s0_ihost $s0_ipass $s0_imount $s0_icao 1>$uwatchdoglog &
+	watchdog_uniden0.sh $s0_rec $s0_port $s0_scard $s0_bitrate $s0_samplerate $s0_scor $s0_ecor $s0_delay $s0_mindur $s0_timez $s0_ihost $s0_ipass $s0_imount $s0_icao 1>$uwatchdoglog &
 fi
