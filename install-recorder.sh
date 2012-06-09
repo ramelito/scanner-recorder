@@ -33,7 +33,7 @@ echo -n "Installing udev rules... "
 test -f 99-usb-serial.rules && cp 99-usb-serial.rules /etc/udev/rules.d/
 test -f 99-nokia-3g-modem.rules && cp 99-nokia-3g-modem.rules /etc/udev/rules.d/
 test -f 99-usb-sound.rules && cp 99-usb-sound.rules /etc/udev/rules.d/
-test -f 99-usb-storage-mgmt.rules && 99-usb-storage-mgmt.rules /etc/udev/rules.d/
+test -f 99-usb-storage-mgmt.rules && cp 99-usb-storage-mgmt.rules /etc/udev/rules.d/
 echo "ok!"
 
 echo -n "Installing readscanner utility... "

@@ -4,20 +4,23 @@ uopt=$1
 scannerindex=$2
 bitrate=$3
 samplerate=$4
-timez=$5
-host=$6
-pass=$7
-mount=$8
+scorr=$5
+delay=$6
+mindur=$7
+th=$8
+timez=$9
+host=${10}
+pass=${11}
+mount=${12}
 divm=60
 divs=60
 
 export TZ=$timez
 scannerhome="/scanner_audio"
-#scannerhome="/tmp"
 arecordpidfile="/tmp/arecord${scannerindex}.pid"
 arecordopts="-Dplug:dsnoop${scardindex} -f S16_LE -r $samplerate -c 1 -q -t wav --process-id-file $arecordpidfile"
 lameopts="-S -m m -q9 -b $bitrate -"
-mp3spltopts="-s -p th=-50,min=2,trackmin=1,rm -Q -N"
+mp3spltopts="-s -p th=${th},min=${delay},trackmin=${mindur},off=${scorr},rm -Q -N"
 mp3spltpidfile="/tmp/mp3splt${scannerindex}.pid"
 renamepidfile="/tmp/rename${scannerindex}.pid"
 darkconf="/tmp/darkice${scannerindex}.conf"
