@@ -17,6 +17,7 @@ icao=${14}
 divm=60
 divs=60
 modf=0
+mdl="^MDL*"
 
 export TZ=$timez
 scannerhome="/scanner_audio"

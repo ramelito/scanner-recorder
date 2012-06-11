@@ -33,7 +33,6 @@ s0_timez=$(echo $scanner0 | cut -d, -f14)
 s0_th=$(echo $scanner0 | cut -d, -f15)
 
 test "X$s0_type" == "X" && s0_type=0
-test "X$s0_port" == "X" && s0_port=$s0_scard
 test "X$s0_rec" == "X" && s0_rec=0
 test "X$s0_scard" == "X" && s0_card=0
 test "X$s0_scor" == "X" && s0_scor=0
@@ -100,21 +99,24 @@ if [ $s0_type -eq 0 ]; then
 		test "X$s0_imount" == "X" && ( echo "Icecast mount not defined. Aborting."; exit 1 )
 
 	fi
-	watchdog0.sh $s0_rec $s0_scard $s0_bitrate $s0_samplerate $s0_scor $s0_delay $s0_mindur $s0_th $s0_timez $s0_ihost $s0_ipass $s0_imount 1>$watchdoglog &
+	watchdog0.sh $s0_rec $s0_scard $s0_bitrate $s0_samplerate $s0_corr $s0_delay $s0_mindur $s0_th $s0_timez $s0_ihost $s0_ipass $s0_imount 1>$watchdoglog &
 fi
 
 if [ $s0_type -eq 1 ]; then
 	echo "Scanner is controlled."
 	while (true); do
-        test -L /dev/scanners/$s0_port && stty -F /dev/scanners/$s0_port 115200 raw
-		test -L /dev/scanners/$s0_port && res=$(MDL -s$s0_port)
-		echo $res
-		if [[ "$res" =~ $mdl ]]; then
-			model=$(echo $res | awk -F, '{print $2}')
-			echo "Scanner detected. Model is $model."
-			break
-		fi
-		sleep 10
+        if [ -L /dev/scanners/$s0_port ]; then
+            stty -F /dev/scanners/$s0_port 115200 raw
+            break;
+        fi
+#		test -L /dev/scanners/$s0_port && res=$(MDL -s$s0_port)
+#		echo $res
+#		if [[ "$res" =~ $mdl ]]; then
+#			model=$(echo $res | awk -F, '{print $2}')
+#			echo "Scanner detected. Model is $model."
+#			break
+#		fi
+#		sleep 1
 	done
 	if [ $s0_rec -gt 0 ]; then
 		echo "Recording for Uniden scanner and livecast."
@@ -125,7 +127,7 @@ if [ $s0_type -eq 1 ]; then
 
 	fi
 
-    sleep 20
+#    sleep 1
 
 	watchdog_uniden0.sh $s0_rec $s0_port $s0_scard $s0_bitrate $s0_samplerate $s0_scor $s0_ecor $s0_delay $s0_mindur $s0_timez $s0_ihost $s0_ipass $s0_imount $s0_icao 1>$uwatchdoglog &
 fi
