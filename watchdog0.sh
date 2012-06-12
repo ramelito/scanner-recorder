@@ -57,10 +57,9 @@ gendarkconf () {
         mountPoint      = $mount
         port            = $port
         password        = $pass" > $darkconf
-        [ $uopt -eq 1 ] && echo "localDumpFile   = $recfile" >> $darkconf
 }
 
-record_only () {
+record () {
 	if [ "$modm" -eq 0 -a "$mods" -eq 0 -o ! -f "/proc/$(cat $arecordpidfile)/exe" ];then
 		echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] Killing previous instance."
 		test -f "/proc/$(cat $arecordpidfile)/exe" && kill -9 $(cat $arecordpidfile)
@@ -81,36 +80,19 @@ record_only () {
 	fi
 }
 
-record_and_or_broadcast() {
-    if [ "$modm" -eq 0 -a "$mods" -eq 0 -o ! -f "/proc/$(cat $darkpidfile)/exe" ];then
-		echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] Killing previous instance."
-        test -f "/proc/$(cat $arecordpidfile)/exe" -a "$modm" -eq 0 -a $uopt -eq 1 && kill -9 $(cat $arecordpidfile)
-        test -f "/proc/$(cat $darkpidfile)/exe" -a "$modm" -eq 0 && kill -9 $(cat $darkpidfile)
+livecast() {
+    if [ ! -f "/proc/$(cat $darkpidfile)/exe" ];then
 		echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] Starting new instance."
-        echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] Going to record to $recfile."
-        test -d "$recdir" || mkdir -p "$recdir"
         echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] Checking connection."
         res=$(curl -s http://source:$pass@$host/admin/listclients?mount=/$mount)
         echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] Result: $res."
         if [[ "$res" =~ "<b>Source does not exist</b>" ]];then
-            echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] Connection established, killing offline recording if exists."
-            test -f "/proc/$(cat $arecordpidfile)/exe" && kill -9 $(cat $arecordpidfile)
             echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] Generating darkice config."
             gendarkconf
             echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] Starting darkice."
             darkice -c $darkconf & echo $! > $darkpidfile
             echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] Darkice started, stream is online, pid - $(cat $darkpidfile)"
-        else
-            echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] Connection broken, continue with offline recording if option 1."
-            test -f "/proc/$(cat $arecordpidfile)/exe" -o $uopt -eq 2 || arecord $arecordopts | lame $lameopts "$recfile" &
         fi
-        echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] Split variables values:"
-        mp3spltinput=$recfile
-        echo "recfile=$recfile"
-        mp3spltrecdir=$recdir/SCANNER${scannerindex}/${hh}
-        echo "mp3spltdir=$mp3spltrecdir"
-        mp3spltoutput=${yy}${mm}${dd}${hh}${min}${sec}_@m@s
-        echo "mp3spltoutput=$mp3spltoutput"
     fi
 }
 
@@ -123,16 +105,15 @@ while (true); do
     sec=$(date +%S)
     modm=$(expr $min % $divm)
     mods=$(expr $sec % $divs)
-	recdir=$scannerhome/${yy}${mm}${dd}/ARCHIVE
+	recdir=$scannerhome/${yy}${mm}${dd}/REC
 	recfile=${recdir}/${yy}${mm}${dd}${hh}_SCANNER${scannerindex}_${min}.mp3
 
-    #record_only
-#   record_and_broadcast
-
     case "$uopt" in
-        0) record_only
+        0) record
             ;;
-        *) record_and_or_broadcast
+        1) record; livecast
+            ;;
+        *) livecast
             ;;
     esac
 
