@@ -11,11 +11,11 @@ mount_options=$3
 echo "[`date "+%Y-%m-%d %H:%M:%S"`] Got new device:usb_device=$usb_device mount_point=$mount_point mount_options=$mount_options and action $ACTION." >> $udevlog
 echo "[`date "+%Y-%m-%d %H:%M:%S"`] Pausing recording." >> $udevlog
 
-for index in `seq 0 9`; do
-	test -e /tmp/scanner${index}.lck && echo 0 > /tmp/scanner${index}.lck
+for file in `ls /tmp/stop*`; do
+    test -e $file && echo 1 > $file
 done
 
-sleep 1s
+sleep 20s
 
 mounted_usb_disk=`mount | grep $mount_point | awk '{print $1}'`
 
@@ -49,6 +49,4 @@ fi
 
 echo "[`date "+%Y-%m-%d %H:%M:%S"`] Resuming recording." >> $udevlog
 
-for index in `seq 0 9`; do
-	test -e /tmp/scanner${index}.lck && echo 1 > /tmp/scanner${index}.lck
-done
+/etc/init.d/record.sh

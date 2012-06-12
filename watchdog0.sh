@@ -18,7 +18,7 @@ divs=60
 export TZ=$timez
 scannerhome="/scanner_audio"
 arecordpidfile="/tmp/arecord${scannerindex}.pid"
-arecordopts="-Dplug:dsnoop${scardindex} -f S16_LE -r $samplerate -c 1 -q -t wav --process-id-file $arecordpidfile"
+arecordopts="-Dplug:dsnoop${scannerindex} -f S16_LE -r $samplerate -c 1 -q -t wav --process-id-file $arecordpidfile"
 lameopts="-S -m m -q9 -b $bitrate -"
 mp3spltopts="-s -p th=${th},min=${delay},trackmin=${mindur},off=${scorr},rm -Q -N"
 mp3spltpidfile="/tmp/mp3splt${scannerindex}.pid"
@@ -44,7 +44,7 @@ gendarkconf () {
         reconnect       = yes
 
         [input] 
-        device          = plug:dsnoop${scardindex}
+        device          = plug:dsnoop${scannerindex}
         sampleRate      = $samplerate
         bitsPerSample   = 16
         channel         = 1
