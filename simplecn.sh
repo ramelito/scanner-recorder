@@ -1,5 +1,9 @@
 #!/bin/bash
 
+. /opt/etc/record.conf
+
+test "X$eth0_address" == "X" || exit 0
+
 interface=eth0
 
 inet=$(/sbin/ifconfig $interface | grep "inet addr" | wc -l)

@@ -15,6 +15,10 @@ echo "DEBUG: checking and sourcing config..."
 test -f ${scannerhome}/${conffile} && cp ${scannerhome}/${conffile} $confpath
 test -f ${confpath}/${conffile} && source ${confpath}/${conffile} || ( echo "File $conffile not found in $confpath."; exit 1 )
 
+echo "Changing IP address to static if configured..."
+
+assign_static_address.sh
+
 echo "DEBUG: offloading env variables."
 
 env > $envpath

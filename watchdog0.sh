@@ -86,9 +86,9 @@ livecast() {
         echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] Checking connection."
         res=$(curl -s http://source:$pass@$host/admin/listclients?mount=/$mount)
         echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] Result: $res."
-        if [[ "$res" =~ "<b>Source does not exist</b>" ]];then
             echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] Generating darkice config."
             gendarkconf
+        if [[ "$res" =~ "<b>Source does not exist</b>" ]];then
             echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] Starting darkice."
             darkice -c $darkconf & echo $! > $darkpidfile
             echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] Darkice started, stream is online, pid - $(cat $darkpidfile)"
