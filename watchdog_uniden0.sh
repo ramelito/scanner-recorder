@@ -70,34 +70,52 @@ gendarkconf () {
         mountPoint      = $mount
         port            = $port
         password        = $pass" > $darkconf
-#        [ $uopt -eq 1 ] && echo "localDumpFile   = $recfile" >> $darkconf
 }
 
 record () {
-	if [ ! -f "/proc/$(cat $splitpidfile)/exe" -o ! -f "/proc/$(cat $loggerpidfile)/exe" -o ! -f "/proc/$(cat $arecordpidfile)/exe" ];then
+	exe1="/proc/$(cat $splitpidfile)/exe"
+	exe2="/proc/$(cat $loggerpidfile)/exe"
+	exe3="/proc/$(cat $arecordpidfile)/exe"
+	if [ ! -f "$exe1" -o ! -f "$exe2" -o ! -f "$exe3" ] ; then
 		echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] Starting new instance."
         	echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] Going to record to $recfile."
-        test -f "/proc/$(cat $arecordpidfile)/exe" && kill -9 $(cat $arecordpidfile)
-        test -f "/proc/$(cat $loggerpidfile)/exe" && kill $(cat $loggerpidfile)
-        test -f "/proc/$(cat $splitpidfile)/exe" && kill $(cat $splitpidfile)
+        	if test -f "/proc/$(cat $arecordpidfile)/exe"; then
+		  echo -n "arecord with pid $(cat $arecordpidfile) is running. Killing it ..."
+		  kill -9 $(cat $arecordpidfile)
+		  echo " ok!"
+		fi
+        	if test -f "/proc/$(cat $loggerpidfile)/exe"; then
+		 echo -n "logger with pid $(cat $loggerpidfile) is running. Killing it ..."
+		 kill $(cat $loggerpidfile)
+		 echo " ok!"
+		fi
+        	if test -f "/proc/$(cat $splitpidfile)/exe"; then
+		 echo -n "splitter with pid $(cat $splitpidfile) is running. Killing it ..."
+ 		 kill -9 $(cat $splitpidfile)
+		 echo " ok!"
+		fi
 	
 		test -d "$recdir" || mkdir -p "$recdir"
 		test -d "$logdir" || mkdir -p "$logdir"
 		test -d "$elogdir" || mkdir -p "$elogdir"
 	
 		echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] arecord opts: $arecordopts."
-       	echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] lame opts: $lameopts."
+       		echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] lame opts: $lameopts."
 
 		arecord $arecordopts | lame $lameopts "$recfile" &
-        sleep 1.5
-        test -f $arecordpidfile || exit 1
-        nanos=$(stat -c %z $arecordpidfile | awk -F. '{print $2}')
-        reftime=$(stat -c %Z $arecordpidfile)
+       		sleep 1.5
+       
+		echo -n "Checking if arecord has started..." 	
+		test -f $arecordpidfile || exit 1
+        	test -f "/proc/$(cat $arecordpidfile)/exe" || exit 1	
+		echo "ok!"
+	
+		nanos=$(stat -c %z $arecordpidfile | awk -F. '{print $2}')
+        	reftime=$(stat -c %Z $arecordpidfile)
 		glgsts $glgopts -l $logfile -i $elogdir -r $reftime.${nanos:0:2} & echo $! > $loggerpidfile
-        split_record.sh $logfile $scor $ecor $mindur & echo $! > $splitpidfile
+        	split_record.sh $logfile $scor $ecor $mindur & echo $! > $splitpidfile
 
         	echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] arecord started with pid $(cat $arecordpidfile)."
-		
 	fi
 }
 
@@ -106,7 +124,7 @@ livecast() {
 		echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] Starting new instance."
 		echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] Checking connection."
 	       
-            echo "http://source:$pass@$host/admin/listclients?mount=/$mount"
+            	echo "http://source:$pass@$host/admin/listclients?mount=/$mount"
 		res=$(curl -s http://source:$pass@$host/admin/listclients?mount=/$mount)
         	echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] Result: $res."
 	        if [[ "$res" =~ "<b>Source does not exist</b>" ]];then
@@ -143,17 +161,17 @@ while (true); do
 	min=$(date +%M)
 	sec=$(date +%S)
 	modm=$(expr $min % $divm)
-    modm5=$(expr $min % 5)
+    	modm5=$(expr $min % 5)
 	recdir=$scannerhome/${yy}${mm}${dd}/REC
 	logdir=$scannerhome/${yy}${mm}${dd}/LOG
-#   elogdir=$logdir/EXT
+#   	elogdir=$logdir/EXT
 	recfile=${recdir}/${yy}${mm}${dd}${hh}_SCANNER${scannerindex}_${min}.mp3
-    logfile=${logdir}/${yy}${mm}${dd}${hh}_SCANNER${scannerindex}_${min}.log
+    	logfile=${logdir}/${yy}${mm}${dd}${hh}_SCANNER${scannerindex}_${min}.log
 
-        [ $modm5 -eq 0 ] && /opt/bin/usbreset.sh $scannerindex
+# 	[ $modm5 -eq 0 ] && /opt/bin/usbreset.sh $scannerindex
 
         if [ $modm -eq 0 -a $modf -eq 0 ]; then
-		    echo 0 > $scannerlck; sleep 1
+#		    echo 0 > $scannerlck; sleep 1
             test -f "/proc/$(cat $arecordpidfile)/exe" && kill -9 $(cat $arecordpidfile)
             test -f "/proc/$(cat $loggerpidfile)/exe" && kill $(cat $loggerpidfile)
             sleep 5s
@@ -173,8 +191,7 @@ while (true); do
     	
         sleep 15s
 
-        [ $modm -ne 0 ] && modf=0
-#		echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] DEBUG: Timing $modm $modf."
+        [ "$modm" != 0 ] && modf=0
 
         if [ $(cat $stopfile) == 1 ]; then
             test -f "/proc/$(cat $arecordpidfile)/exe" && kill -9 $(cat $arecordpidfile)

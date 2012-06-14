@@ -17,7 +17,7 @@ test -f ${confpath}/${conffile} && source ${confpath}/${conffile} || ( echo "Fil
 
 echo "Changing IP address to static if configured..."
 
-assign_static_address.sh
+assign_static_address.sh &
 
 echo "DEBUG: offloading env variables."
 

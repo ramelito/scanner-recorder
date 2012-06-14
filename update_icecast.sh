@@ -5,6 +5,8 @@ host=$2
 pass=$3
 mount=$4
 icao=$5
+curlout="/tmp/updateicecast${scannerindex}.log"
+
 
 prevline="EMPTY"
 metarfile="/tmp/${icao}.metar"
@@ -34,7 +36,8 @@ do
 	fi
 	if [ "$prevline" != "$curline" ]; then
         echo "Change in $scannerlog detected, update $host/$mount with $curline+$metar"
-		curl -s -u admin:${pass} "http://${host}/admin/metadata?mount=/${mount}&mode=updinfo&song=$curline+$metar"
+		webaddress="http://${host}/admin/metadata?mount=/${mount}&mode=updinfo&song=$curline+$metar"
+		curl -o $curlout -s -u admin:${pass} $webaddress
 	fi
 	sleep 1
 	prevline="$curline";
