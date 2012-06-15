@@ -76,10 +76,11 @@ record () {
         	echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] Split variables values:"
         	mp3spltinput=$recfile
         	echo "recfile=$recfile"
-        	mp3spltrecdir=$recdir/SCANNER${scannerindex}/${hh}
+        	mp3spltrecdir=$todaydir/SCANNER${scannerindex}/${hh}
         	echo "mp3spltdir=$mp3spltrecdir"
         	mp3spltoutput=${yy}${mm}${dd}${hh}${min}${sec}_@m@s
         	echo "mp3spltoutput=$mp3spltoutput"
+		sleep 60
 	fi
 }
 
@@ -108,6 +109,7 @@ while (true); do
     	sec=$(date +%S)
     	modm=$(expr $min % $divm)
     	mods=$(expr $sec % $divs)
+        todaydir=$scannerhome/${yy}${mm}${dd}	
 	recdir=$scannerhome/${yy}${mm}${dd}/REC
 	recfile=${recdir}/${yy}${mm}${dd}${hh}_SCANNER${scannerindex}_${min}.mp3
 
@@ -120,24 +122,35 @@ while (true); do
             ;;
     esac
 
-    if [ "$mods" -eq 0 -a ! -f "/proc/$(cat $mp3spltpidfile)/exe" -a $uopt -ne 2 ];then
-        mp3splt $mp3spltopts -d $mp3spltrecdir -o $mp3spltoutput $mp3spltinput & echo $! > $mp3spltpidfile
+    if [ $uopt -ne 2 ];then
+        mp3splt $mp3spltopts -d $mp3spltrecdir -o $mp3spltoutput $mp3spltinput && rename.sh $mp3spltrecdir 
     fi
-    if [ "$mods" -eq 30 -a ! -f "/proc/$(cat $mp3spltpidfile)/exe" -a ! -f "/proc/$(cat $renamepidfile)/exe" -a $uopt -ne 2 ];then
-        rename.sh $mp3spltrecdir & echo $! > $renamepidfile
-    fi
-    sleep 0.75
+
 
    if [ $modm -eq 0 -a $modf -eq 0 ]; then
         test -f "/proc/$(cat $arecordpidfile)/exe" && kill -9 $(cat $arecordpidfile)
-   	modf=1
+        if [ $uopt -ne 2 ]; then 
+        	mp3splt $mp3spltopts -d $mp3spltrecdir -o $mp3spltoutput $mp3spltinput && rename.sh $mp3spltrecdir
+   	fi	
+	modf=1
    fi
 
    [ "$modm" != 0 ] && modf=0
 
    if [ $(cat $stopfile) == 1 ]; then
-        test -f "/proc/$(cat $arecordpidfile)/exe" && kill -9 $(cat $arecordpidfile)
-        test -f "/proc/$(cat $darkpidfile)/exe" && kill -9 $(cat $darkpidfile)
+       	echo "Received signal to stop..."
+	echo -n "Stopping arecord ..." 
+	test -f "/proc/$(cat $arecordpidfile)/exe" && kill -9 $(cat $arecordpidfile)
+	echo "ok!"
+        echo -n "Stopping darkice ..." 
+	test -f "/proc/$(cat $darkpidfile)/exe" && kill -9 $(cat $darkpidfile)
+        echo "ok!" 
+	if [ $uopt -ne 2 ]; then 
+        	echo -n "Running mp3splt and rename ... "	
+		mp3splt $mp3spltopts -d $mp3spltrecdir -o $mp3spltoutput $mp3spltinput && rename.sh $mp3spltrecdir
+   		echo "done!"	
+	fi	
    	exit 1
    fi
+   sleep 20 
 done
