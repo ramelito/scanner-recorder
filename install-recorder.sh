@@ -1,7 +1,7 @@
 #!/bin/bash
 
 installpath=/opt/bin
-configpath=/opt/etc
+configpath=/scanner_audio
 
 echo "Installing recording software onto you board."
 
@@ -9,34 +9,39 @@ test -d $installpath ||  mkdir -p $installpath
 test -d $configpath ||  mkdir -p $configpath
 
 echo -n "Installing scripts... "
-test -f MDL &&  cp MDL $installpath || (echo "failed to install MDL"; exit 1)
-test -f code.sh &&  cp code.sh $installpath || (echo "failed to install code.sh"; exit 1)
-test -f extdrv_handler.sh &&  cp extdrv_handler.sh $installpath || (echo "failed to install extdrv_handler.sh"; exit 1)
-test -f simplecn.sh &&  cp simplecn.sh $installpath || (echo "failed to install simplecn.sh"; exit 1)
-test -f start3g.sh &&  cp start3g.sh $installpath || (echo "failed to install start3g.sh"; exit 1)
-test -f usbreset.sh &&  cp usbreset.sh $installpath || (echo "failed to install usbreset.sh"; exit 1)
-test -f recordcleaner.sh &&  cp recordcleaner.sh $installpath || (echo "failed to install recordcleaner.sh"; exit 1)
-test -f split_record.sh &&  cp split_record.sh $installpath || (echo "failed to install split_record.sh"; exit 1)
-test -f usb_port_no.pm &&  cp usb_port_no.pm $installpath || (echo "failed to install usb_port_no.pm"; exit 1)
-test -f rename.sh &&  cp rename.sh $installpath || (echo "failed to install rename.sh"; exit 1)
-test -f clrsym.sed &&  cp clrsym.sed $installpath || (echo "failed to install clrsym.sed"; exit 1)
-test -f update_icecast.sh &&  cp update_icecast.sh $installpath || (echo "failed to install update_icecast.sh"; exit 1)
-test -f watchdog0.sh &&  cp watchdog0.sh $installpath || (echo "failed to install watchdog0.sh"; exit 1)
-test -f watchdog_uniden0.sh &&  cp watchdog_uniden0.sh $installpath || (echo "failed to install watchdog_uniden0.sh"; exit 1)
-test -f record.conf &&  cp record.conf $configpath || (echo "failed to install record.conf"; exit 1)
-test -f record0.sh &&  cp record0.sh $installpath || (echo "failed to install record0.sh"; exit 1)
-test -f record.sh &&  cp record.sh /etc/init.d || (echo "failed to install record.sh"; exit 1)
-update-rc.d record.sh start 99 S .
+test -f assign_static_address.sh && cp assign_static_address.sh $installpath
+test -f code.sh &&  cp code.sh $installpath 
+test -f extdrv_handler.sh &&  cp extdrv_handler.sh $installpath 
+test -f simplecn.sh &&  cp simplecn.sh $installpath 
+test -f usbreset.sh &&  cp usbreset.sh $installpath
+test -f recordcleaner.sh &&  cp recordcleaner.sh $installpath
+test -f split_record.sh &&  cp split_record.sh $installpath
+test -f usb_port_no.pm &&  cp usb_port_no.pm $installpath
+test -f rename.sh &&  cp rename.sh $installpath
+test -f clrsym.sed &&  cp clrsym.sed $installpath
+test -f update_icecast.sh &&  cp update_icecast.sh $installpath
+test -f watchdog0.sh &&  cp watchdog0.sh $installpath
+test -f watchdog_uniden0.sh &&  cp watchdog_uniden0.sh $installpath
+test -f record.conf &&  cp record.conf $configpath
+test -f record0.sh &&  cp record0.sh $installpath
+test -f start3g.sh &&  cp start3g.sh $installpath
+test -f megafon-chat &&  cp megafon-chat $installpath
+test -f megafon-peer &&  cp megafon-peer /etc/ppp/peers/ 
+test -f 01defaultroute &&  cp 01defaultroute /etc/ppp/ip-up.d/ 
+test -f record.sh &&  cp record.sh /etc/init.d
+test -f networking &&  cp networking /etc/init.d
+test -f udev &&  cp udev /etc/init.d
+test -h /etc/rcS.d/S15udev.sh || update-rc.d udev start 15 S .
+test -h /etc/rcS.d/S99record.sh || update-rc.d record.sh start 99 S .
 echo "ok!"
 
 echo -n "Installing udev rules... "
 test -f 99-usb-serial.rules && cp 99-usb-serial.rules /etc/udev/rules.d/
-test -f 99-nokia-3g-modem.rules && cp 99-nokia-3g-modem.rules /etc/udev/rules.d/
 test -f 99-usb-sound.rules && cp 99-usb-sound.rules /etc/udev/rules.d/
 test -f 99-usb-storage-mgmt.rules && cp 99-usb-storage-mgmt.rules /etc/udev/rules.d/
 echo "ok!"
 
-echo -n "Installing readscanner utility... "
+echo -n "Installing glgsts utility... "
 type -P wget &>/dev/null || (echo "No wget. Install it."; exit 1)
 arch=$(uname -m)
 wget http://www.amelito.com/rec/${arch}/glgsts -O /tmp/glgsts -q

@@ -44,7 +44,7 @@ if [ "$mounted_usb_disk" == "$usb_device" -a "$ACTION" == "remove" ]; then
 	echo "[`date "+%Y-%m-%d %H:%M:%S"`] Unmounting $mount_point on remove action." >> $udevlog
 	umount -l "$mount_point"
 	rmdir "$mount_point"
-	ln -s /media/mmcblk0p3/scanner_audio /scanner_audio
+	ln -s /media/mmcblk0p1/scanner_audio /scanner_audio
 fi
 
 echo "[`date "+%Y-%m-%d %H:%M:%S"`] Resuming recording." >> $udevlog

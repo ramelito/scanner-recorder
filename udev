@@ -1,0 +1,25 @@
+#!/bin/sh
+
+### BEGIN INIT INFO
+# Provides:          udev
+# Required-Start:    mountvirtfs
+# Required-Stop:     
+# Default-Start:     S
+# Default-Stop:
+# Short-Description: Start udevd, populate /dev and load drivers.
+### END INIT INFO
+
+export TZ=/etc/localtime
+
+echo "Starting udev"
+
+if [ ! -e "/lib/modules/$(uname -r)"/modules.dep ] ; then
+	mkdir -p /lib/modules/$(uname -r)
+	depmod -ae
+fi
+
+# trigger the sorted events
+echo -e '\000\000\000\000' > /proc/sys/kernel/hotplug
+/lib/udev/udevd -d
+
+exit 0
