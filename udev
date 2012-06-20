@@ -22,4 +22,7 @@ fi
 echo -e '\000\000\000\000' > /proc/sys/kernel/hotplug
 /lib/udev/udevd -d
 
+/usr/bin/udevadm trigger --action=add
+/usr/bin/udevadm settle
+
 exit 0

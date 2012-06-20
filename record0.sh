@@ -15,6 +15,9 @@ type -P darkice &>/dev/null || ( echo "No darkice utility is installed. Install 
 type -P mp3splt &>/dev/null || ( echo "No mp3splt utility is installed. Install mp3splt."; exit 1 )
 
 scanner0=$1
+timeout=$2
+
+[ "$timeout" == "0" ] || sleep $timeout
 
 s0_type=$(echo $scanner0 | cut -d, -f1)
 s0_port=$(echo $scanner0 | cut -d, -f2)

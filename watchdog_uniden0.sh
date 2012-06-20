@@ -44,7 +44,10 @@ touch $loggerpidfile
 touch $darkpidfile
 touch $updatepidfile
 
+test -e $stopfile && exit 1
+
 echo 0 > $stopfile
+
 echo 0 > $scannerlck
 
 [ "X$uopt" == "X" ] && uopt=0
@@ -200,6 +203,7 @@ while (true); do
             test -f "/proc/$(cat $updatepidfile)/exe" && kill $(cat $updatepidfile)
             test -f "/proc/$(cat $splitpidfile)/exe" && kill $(cat $splitpidfile)
             sleep 5s
-            exit 1
+	    rm $stopfile
+	    exit 1
         fi
 done

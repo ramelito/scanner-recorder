@@ -17,11 +17,15 @@ while (true); do
 
 	ls $mp3spltrecdir | grep _ > $list
 
-	first=$(cat $list | head -1)
-	last=$(cat $list | tail -1)	
+	first=""
+	last=""
 
-	[ "X$first" == "X" ] && continue || mp3splt -r $mp3spltopts -d $mp3spltrecdir -o m${first%.*} $first
-	[ "$first" == "$last" ] || mp3splt -r $mp3spltopts -d $mp3spltrecdir -o m${last%.*} $last 
+	numlines=$(cat $list | wc -l)
+	first=$(cat $list | head -1)
+	[ $numlines -gt 1 ] && last=$(cat $list | tail -1)	
+
+	test -e $first && mp3splt -r $mp3spltopts -d $mp3spltrecdir -o m${first%.*} $first 
+	test -e $last && mp3splt -r $mp3spltopts -d $mp3spltrecdir -o m${last%.*} $last 
 
 	test -e $mp3spltrecdir/m${first} && mv $mp3spltrecdir/m${first} $mp3spltrecdir/$first
 	test -e $mp3spltrecdir/m${last} && mv $mp3spltrecdir/m${last} $mp3spltrecdir/$last

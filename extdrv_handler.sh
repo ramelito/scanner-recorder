@@ -49,4 +49,4 @@ fi
 
 echo "[`date "+%Y-%m-%d %H:%M:%S"`] Resuming recording." >> $udevlog
 
-/etc/init.d/record.sh
+/etc/init.d/record.sh 0 

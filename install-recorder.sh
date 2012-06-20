@@ -17,7 +17,7 @@ test -f usbreset.sh &&  cp usbreset.sh $installpath
 test -f recordcleaner.sh &&  cp recordcleaner.sh $installpath
 test -f split_record.sh &&  cp split_record.sh $installpath
 test -f usb_port_no.pm &&  cp usb_port_no.pm $installpath
-test -f rename.sh &&  cp rename.sh $installpath
+test -f split_rename.sh &&  cp split_rename.sh $installpath
 test -f clrsym.sed &&  cp clrsym.sed $installpath
 test -f update_icecast.sh &&  cp update_icecast.sh $installpath
 test -f watchdog0.sh &&  cp watchdog0.sh $installpath

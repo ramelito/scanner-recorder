@@ -33,6 +33,8 @@ touch $arecordpidfile
 touch $spltrnamepidf
 touch $darkpidfile
 
+test -e $stopfile && exit 1
+
 echo 0 > $stopfile
 
 [ "X$uopt" == "X" ] && uopt=0
@@ -145,6 +147,7 @@ while (true); do
         echo -n "Stopping spltrname ..." 
        	test -f "/proc/$(cat $spltrnamepidf)/exe" && kill -9 $(cat $spltrnamepidf)
         echo "ok!" 
+	rm $stopfile
 	exit 1
    fi
    sleep 2 

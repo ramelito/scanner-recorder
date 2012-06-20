@@ -4,6 +4,8 @@ set -a
 export LANG=C
 export PATH=/opt/bin:$PATH
 
+[ "X$timeout" == "X" ] && timeout=10
+
 scannerhome="/scanner_audio"
 confpath="/opt/etc"
 conffile="record.conf"
@@ -32,6 +34,5 @@ echo "" > $asound
 for i in $(seq 1 $num); do
         params=$(eval   "echo \$$( echo scanner${i})")
         echo "Starting record0.sh with $params."
-	#record0.sh $params > /dev/null &	
-	record0.sh $params  &	
+	record0.sh $params $timeout &	
 done
