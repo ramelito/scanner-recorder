@@ -15,7 +15,7 @@ for file in `ls /tmp/stop*`; do
     test -e $file && echo 1 > $file
 done
 
-sleep 20s
+sleep 20 
 
 mounted_usb_disk=`mount | grep $mount_point | awk '{print $1}'`
 

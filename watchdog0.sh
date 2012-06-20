@@ -21,9 +21,7 @@ scannerhome="/scanner_audio"
 arecordpidfile="/tmp/arecord${scannerindex}.pid"
 arecordopts="-Dplug:dsnoop${scannerindex} -f S16_LE -r $samplerate -c 1 -q -t wav --process-id-file $arecordpidfile"
 lameopts="-S -m m -q9 -b $bitrate -"
-mp3spltopts="-s -p th=${th},min=${delay},trackmin=${mindur},off=${scorr},rm -Q -N"
-mp3spltpidfile="/tmp/mp3splt${scannerindex}.pid"
-renamepidfile="/tmp/rename${scannerindex}.pid"
+spltrnamepidf="/tmp/spltrnamepidf${scannerindex}.pid"
 darkconf="/tmp/darkice${scannerindex}.conf"
 darkpidfile="/tmp/darkice${scannerindex}.pid"
 stopfile="/tmp/stop${scannerindex}"
@@ -32,8 +30,7 @@ host0=$(echo $host | awk -F: '{print $1}')
 port=$(echo $host | awk -F: '{print $2}')
 
 touch $arecordpidfile
-touch $mp3spltpidfile
-touch $renamepidfile
+touch $spltrnamepidf
 touch $darkpidfile
 
 echo 0 > $stopfile
@@ -74,12 +71,12 @@ record () {
 		arecord $arecordopts | lame $lameopts "$recfile" &
         	echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] arecord started with pid $(cat $arecordpidfile)."
         	echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] Split variables values:"
-        	mp3spltinput=$recfile
+        	spltin=$recfile
         	echo "recfile=$recfile"
-        	mp3spltrecdir=$todaydir/SCANNER${scannerindex}/${hh}
-        	echo "mp3spltdir=$mp3spltrecdir"
-        	mp3spltoutput=${yy}${mm}${dd}${hh}${min}${sec}_@m@s
-        	echo "mp3spltoutput=$mp3spltoutput"
+        	spltrecdir=$todaydir/SCANNER${scannerindex}/${hh}
+        	echo "spltdir=$spltrecdir"
+        	spltout=${yy}${mm}${dd}${hh}${min}${sec}_@m@s
+        	echo "spltout=$spltout"
 		sleep 60
 	fi
 }
@@ -97,6 +94,12 @@ livecast() {
             		darkice -c $darkconf & echo $! > $darkpidfile
             		echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] Darkice started, stream is online, pid - $(cat $darkpidfile)"
         	fi
+    fi
+}
+
+spltrname() {
+    if [ $uopt -ne 2 -a ! -f "/proc/$(cat $spltrnamepidf)/exe" ];then
+	split_rename.sh $th $delay $mindur $scorr $spltrecdir $spltout $spltin & echo $! > $spltrnamepidf
     fi
 }
 
@@ -122,16 +125,11 @@ while (true); do
             ;;
     esac
 
-    if [ $uopt -ne 2 ];then
-        mp3splt $mp3spltopts -d $mp3spltrecdir -o $mp3spltoutput $mp3spltinput && rename.sh $mp3spltrecdir 
-    fi
-
+    spltrname
 
    if [ $modm -eq 0 -a $modf -eq 0 ]; then
         test -f "/proc/$(cat $arecordpidfile)/exe" && kill -9 $(cat $arecordpidfile)
-        if [ $uopt -ne 2 ]; then 
-        	mp3splt $mp3spltopts -d $mp3spltrecdir -o $mp3spltoutput $mp3spltinput && rename.sh $mp3spltrecdir
-   	fi	
+	spltrname	
 	modf=1
    fi
 
@@ -145,12 +143,8 @@ while (true); do
         echo -n "Stopping darkice ..." 
 	test -f "/proc/$(cat $darkpidfile)/exe" && kill -9 $(cat $darkpidfile)
         echo "ok!" 
-	if [ $uopt -ne 2 ]; then 
-        	echo -n "Running mp3splt and rename ... "	
-		mp3splt $mp3spltopts -d $mp3spltrecdir -o $mp3spltoutput $mp3spltinput && rename.sh $mp3spltrecdir
-   		echo "done!"	
-	fi	
-   	exit 1
+   	spltrname	
+	exit 1
    fi
-   sleep 20 
+   sleep 15 
 done
