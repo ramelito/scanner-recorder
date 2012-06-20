@@ -37,7 +37,7 @@ do
 	if [ "$prevline" != "$curline" ]; then
         echo "Change in $scannerlog detected, update $host/$mount with $curline+$metar"
 		webaddress="http://${host}/admin/metadata?mount=/${mount}&mode=updinfo&song=$curline+$metar"
-		curl -o $curlout -s -u admin:${pass} $webaddress
+		curl -o $curlout -s -u source:${pass} $webaddress
 	fi
 	sleep 1
 	prevline="$curline";

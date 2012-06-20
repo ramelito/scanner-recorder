@@ -78,6 +78,8 @@ record () {
         	spltout=${yy}${mm}${dd}${hh}${min}${sec}_@m@s
         	echo "spltout=$spltout"
 		sleep 60
+        	test -f "/proc/$(cat $spltrnamepidf)/exe" && kill -9 $(cat $spltrnamepidf)
+		spltrname		
 	fi
 }
 
@@ -125,11 +127,8 @@ while (true); do
             ;;
     esac
 
-    spltrname
-
    if [ $modm -eq 0 -a $modf -eq 0 ]; then
         test -f "/proc/$(cat $arecordpidfile)/exe" && kill -9 $(cat $arecordpidfile)
-	spltrname	
 	modf=1
    fi
 
@@ -143,8 +142,10 @@ while (true); do
         echo -n "Stopping darkice ..." 
 	test -f "/proc/$(cat $darkpidfile)/exe" && kill -9 $(cat $darkpidfile)
         echo "ok!" 
-   	spltrname	
+        echo -n "Stopping spltrname ..." 
+       	test -f "/proc/$(cat $spltrnamepidf)/exe" && kill -9 $(cat $spltrnamepidf)
+        echo "ok!" 
 	exit 1
    fi
-   sleep 15 
+   sleep 2 
 done
