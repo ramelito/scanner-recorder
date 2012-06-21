@@ -8,10 +8,11 @@ mp3spltrecdir=$5
 mp3spltoutput=$6
 mp3spltinput=$7
 
-mp3spltopts=" -p th=${th},min=${delay},trackmin=${mindur},off=${scorr},rm -Q"
+mp3spltopts="-s -p th=${th},min=${delay},trackmin=${mindur},off=${scorr},rm -Q -N"
+mp3spltopts_tr="-r -p th=${th},min=0.3,rm -Q"
 
 while (true); do
-	mp3splt -s -N $mp3spltopts -d $mp3spltrecdir -o $mp3spltoutput $mp3spltinput 
+	mp3splt $mp3spltopts -d $mp3spltrecdir -o $mp3spltoutput $mp3spltinput 
 	workdir=$1
 	list=$(mktemp)
 
@@ -24,8 +25,8 @@ while (true); do
 	first=$(cat $list | head -1)
 	[ $numlines -gt 1 ] && last=$(cat $list | tail -1)	
 
-	test -e $first && mp3splt -r $mp3spltopts -d $mp3spltrecdir -o m${first%.*} $first 
-	test -e $last && mp3splt -r $mp3spltopts -d $mp3spltrecdir -o m${last%.*} $last 
+	test -e $first && mp3splt $mp3spltopts_tr -d $mp3spltrecdir -o m${first%.*} $first 
+	test -e $last && mp3splt $mp3spltopts_tr -d $mp3spltrecdir -o m${last%.*} $last 
 
 	test -e $mp3spltrecdir/m${first} && mv $mp3spltrecdir/m${first} $mp3spltrecdir/$first
 	test -e $mp3spltrecdir/m${last} && mv $mp3spltrecdir/m${last} $mp3spltrecdir/$last

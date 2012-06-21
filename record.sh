@@ -12,6 +12,8 @@ conffile="record.conf"
 envpath="/tmp/env.txt"
 asound="/etc/asound.conf"
 
+test -n 0.ru.pool.ntp.org && /usr/bin/ntpdate 0.ru.pool.ntp.org
+
 echo "DEBUG: checking and sourcing config..."
 
 test -f ${scannerhome}/${conffile} && cp ${scannerhome}/${conffile} $confpath
@@ -30,6 +32,8 @@ echo "DEBUG: entering loop to run record0.sh."
 num=$(cat $envpath | grep scanner[0-9] | wc -l)
 
 echo "" > $asound
+
+test -L $scannerhome || ln -s /media/mmcblk0p1/scanner_audio /scanner_audio
 
 for i in $(seq 1 $num); do
         params=$(eval   "echo \$$( echo scanner${i})")

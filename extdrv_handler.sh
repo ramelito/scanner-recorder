@@ -7,9 +7,12 @@ udevlog=/tmp/99udev.log
 usb_device=$1
 mount_point=$2
 mount_options=$3
+scannerhome="/scanner_audio"
 
 echo "[`date "+%Y-%m-%d %H:%M:%S"`] Got new device:usb_device=$usb_device mount_point=$mount_point mount_options=$mount_options and action $ACTION." >> $udevlog
 echo "[`date "+%Y-%m-%d %H:%M:%S"`] Pausing recording." >> $udevlog
+
+test -L $scannerhome || exit 1 
 
 for file in `ls /tmp/stop*`; do
     test -e $file && echo 1 > $file
@@ -39,7 +42,7 @@ if [ "A$mounted_usb_disk" == "A" -a "$ACTION" == "add" ]; then
 	ln -s "$mount_point/scanner_audio" /scanner_audio
 fi
 
-if [ "$mounted_usb_disk" == "$usb_device" -a "$ACTION" == "remove" ]; then
+if [ "$ACTION" == "remove" ]; then
 	test -L /scanner_audio && rm /scanner_audio
 	echo "[`date "+%Y-%m-%d %H:%M:%S"`] Unmounting $mount_point on remove action." >> $udevlog
 	umount -l "$mount_point"
