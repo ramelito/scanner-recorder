@@ -7,30 +7,24 @@ scorr=$4
 mp3spltrecdir=$5
 mp3spltoutput=$6
 mp3spltinput=$7
+bitrate=$8
+logfile="/tmp/splitrename.log"
 
-mp3spltopts="-s -p th=${th},min=${delay},trackmin=${mindur},off=${scorr},rm -Q -N"
-mp3spltopts_tr="-r -p th=${th},min=0.3,rm -Q"
+mp3spltopts="-s -p th=${th},min=${delay} -Q -N"
+soxopts="silence -l 1 0.1 1% -1 0.5 1%"
 
-while (true); do
+spltrename() {
+	
+	echo "[$(date)] Running mp3splt on $mp3spltinput with $mp3spltopts" >> $logfile
 	mp3splt $mp3spltopts -d $mp3spltrecdir -o $mp3spltoutput $mp3spltinput 
-	workdir=$1
 	list=$(mktemp)
 
+	echo "[$(date)] Creating list $list of files to rename" >> $logfile
 	ls $mp3spltrecdir | grep _ > $list
-
-	first=""
-	last=""
-
 	numlines=$(cat $list | wc -l)
-	first=$(cat $list | head -1)
-	[ $numlines -gt 1 ] && last=$(cat $list | tail -1)	
-
-	test -e $first && mp3splt $mp3spltopts_tr -d $mp3spltrecdir -o m${first%.*} $first 
-	test -e $last && mp3splt $mp3spltopts_tr -d $mp3spltrecdir -o m${last%.*} $last 
-
-	test -e $mp3spltrecdir/m${first} && mv $mp3spltrecdir/m${first} $mp3spltrecdir/$first
-	test -e $mp3spltrecdir/m${last} && mv $mp3spltrecdir/m${last} $mp3spltrecdir/$last
-
+	[ "$numlines" == "0" ] && return 0
+	
+	echo "[$(date)] Reading list of files to rename." >> $logfile
 	while read line; do
     		filename=${line%.*}
     		datepart=$(echo $filename | awk -F"_" '{print $1}')
@@ -48,10 +42,40 @@ while (true); do
     		[ ${shiftmins:0:1} == 0 ] && shiftmins=${shiftmins:1:1}
     		let shiftsecs=${shiftmins}*60+$shiftsecs
     		let dpepoch=$dpepoch+$shiftsecs
-		echo "Moving file $filename to $(date -d "@$dpepoch" +%Y%m%d%H%M%S)"
-    		mv ${mp3spltrecdir}/${line} ${mp3spltrecdir}/$(date -d "@$dpepoch" +%Y%m%d%H%M%S).mp3
+    		newfile=${mp3spltrecdir}/$(date -d "@$dpepoch" +%Y%m%d%H%M%S)
+		if [ ! -f ${newfile}.mp3 ]; then
+			echo "[$(date)] Soxing ${newfile}.wav." >> $logfile
+			sox ${mp3spltrecdir}/${line} ${newfile}.wav $soxopts
+			echo "[$(date)] Laming ${newfile}.wav." >> $logfile
+			lame --quiet -b $bitrate ${newfile}.wav ${newfile}.mp3
+			echo "[$(date)] Removing ${newfile}.wav." >> $logfile
+			rm ${newfile}.wav 
+		fi
+		echo "[$(date)] Removing ${mp3spltrecdir}/${line}." >> $logfile
+		rm ${mp3spltrecdir}/${line}	
 	done < $list
+	echo "[$(date)] Removing $list." >> $logfile	
 	rm $list
+}
 
-	sleep 30
+ctrl_c() {
+	echo "[$(date)] Received interrupting signal." >> $logfile	
+	
+	spltrename	
+		
+	echo "[$(date)] Exiting..." >> $logfile	
+	exit 0
+}
+
+trap ctrl_c SIGTERM
+
+
+echo "[$(date)] Entering into infinite loop" >> $logfile
+
+while (true); do
+
+	spltrename
+
+	echo "[$(date)] Let's sleep for 120 secs." >> $logfile
+	sleep 120 
 done

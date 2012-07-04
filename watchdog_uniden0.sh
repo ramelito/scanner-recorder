@@ -108,11 +108,13 @@ record () {
 		arecord $arecordopts | lame $lameopts "$recfile" &
        		sleep 1.5
        
-		echo -n "Checking if arecord has started..." 	
-		test -f $arecordpidfile || exit 1
-        	test -f "/proc/$(cat $arecordpidfile)/exe" || exit 1	
-		echo "ok!"
-	
+                echo -n "Checking if arecord has started..."    
+                if [ ! -f $arecordpidfile -o ! -f "/proc/$(cat $arecordpidfile)/exe" ]; then
+                 test -f "/proc/$(cat $darkpidfile)/exe" && kill -9 $(cat $darkpidfile)
+                 return 1
+                fi
+                echo "ok!"
+
 		nanos=$(stat -c %z $arecordpidfile | awk -F. '{print $2}')
         	reftime=$(stat -c %Z $arecordpidfile)
 		glgsts $glgopts -l $logfile -i $elogdir -r $reftime.${nanos:0:2} & echo $! > $loggerpidfile

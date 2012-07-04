@@ -71,7 +71,15 @@ record () {
         	echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] arecord opts: $arecordopts."
         	echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] lame opts: $lameopts."
 		arecord $arecordopts | lame $lameopts "$recfile" &
-        	echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] arecord started with pid $(cat $arecordpidfile)."
+               	sleep 2 
+		echo -n "Checking if arecord has started..."
+                if [ ! -f $arecordpidfile -o ! -f "/proc/$(cat $arecordpidfile)/exe" ]; then
+                 test -f "/proc/$(cat $darkpidfile)/exe" && kill -9 $(cat $darkpidfile)
+                 return 1
+                fi
+                echo "ok!"
+	
+		echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] arecord started with pid $(cat $arecordpidfile)."
         	echo "[ ${yy}-${mm}-${dd} ${hh}:${min}:${sec} ] Split variables values:"
         	spltin=$recfile
         	echo "recfile=$recfile"
@@ -79,8 +87,8 @@ record () {
         	echo "spltdir=$spltrecdir"
         	spltout=${yy}${mm}${dd}${hh}${min}${sec}_@m@s
         	echo "spltout=$spltout"
-		sleep 60
-        	test -f "/proc/$(cat $spltrnamepidf)/exe" && kill -9 $(cat $spltrnamepidf)
+        	test -f "/proc/$(cat $spltrnamepidf)/exe" && kill $(cat $spltrnamepidf)
+		sleep 58 
 		spltrname		
 	fi
 }
@@ -103,7 +111,7 @@ livecast() {
 
 spltrname() {
     if [ $uopt -ne 2 -a ! -f "/proc/$(cat $spltrnamepidf)/exe" ];then
-	split_rename.sh $th $delay $mindur $scorr $spltrecdir $spltout $spltin & echo $! > $spltrnamepidf
+	split_rename.sh $th $delay $mindur $scorr $spltrecdir $spltout $spltin $bitrate & echo $! > $spltrnamepidf
     fi
 }
 
@@ -145,7 +153,7 @@ while (true); do
 	test -f "/proc/$(cat $darkpidfile)/exe" && kill -9 $(cat $darkpidfile)
         echo "ok!" 
         echo -n "Stopping spltrname ..." 
-       	test -f "/proc/$(cat $spltrnamepidf)/exe" && kill -9 $(cat $spltrnamepidf)
+       	test -f "/proc/$(cat $spltrnamepidf)/exe" && kill $(cat $spltrnamepidf)
         echo "ok!" 
 	rm $stopfile
 	exit 1
