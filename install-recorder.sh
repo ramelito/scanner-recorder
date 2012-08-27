@@ -37,8 +37,8 @@ test -f record.sh &&  cp record.sh /etc/init.d/
 test -f networking &&  cp networking /etc/init.d/
 test -f udev &&  cp udev /etc/init.d/
 test -f smb.conf &&  cp udev /etc/samba/
-test -h /etc/rcS.d/S15udev.sh || update-rc.d udev start 15 S .
-test -h /etc/rcS.d/S99record.sh || update-rc.d record.sh start 99 S .
+test -h /etc/rcS.d/S15udev.sh || /usr/sbin/update-rc.d udev start 15 S .
+test -h /etc/rcS.d/S99record.sh || /usr/sbin/update-rc.d record.sh start 99 S .
 echo "ok!"
 
 echo -n "Installing udev rules... "
@@ -61,5 +61,5 @@ md5sum1=$(md5sum /tmp/glgsts | awk -F" " '{print $1}')
 echo "ok!"
 
 echo -n "Setting samba password..."
-echo -ne "recorder\nrecorder\n" | smbpasswd -s
+echo -ne "recorder\nrecorder\n" | smbpasswd -s recorder
 echo "ok!"
