@@ -8,6 +8,7 @@ mdl="^MDL*"
 watchdoglog="/tmp/watchdog.log"
 uwatchdoglog="/tmp/uwatchdog.log"
 asound="/etc/asound.conf"
+modemportfile="/tmp/modemport"
 
 type -P arecord &>/dev/null || ( echo "No arecord utility is installed. Install alsa-utils."; exit 1 )
 type -P lame &>/dev/null || ( echo "No lame utility is installed. Install lame."; exit 1 )
@@ -34,6 +35,8 @@ s0_delay=$(echo $scanner0 | cut -d, -f12)
 s0_mindur=$(echo $scanner0 | cut -d, -f13)
 s0_timez=$(echo $scanner0 | cut -d, -f14)
 s0_th=$(echo $scanner0 | cut -d, -f15)
+s0_vol=$(echo $scanner0 | cut -d, -f16)
+s0_mport=$(echo $scanner0 | cut -d, -f17)
 
 test "X$s0_type" == "X" && s0_type=0
 test "X$s0_port" == "X" && s0_port=$s0_scard
@@ -45,6 +48,10 @@ test "X$s0_delay" == "X" && s0_delay="0.8"
 test "X$s0_mindur" == "X" && s0_mindur="2.5"
 test "Xs0_timez" == "X" && s0_timez="UTC"
 test "Xs0_th" == "X" && s0_th="-48"
+test "Xs0_vol" == "X" && s0_vol=4
+test "Xs0_icao" == "X" && s0_icao="UUEE"
+test "Xs0_mport" == "X" && s0_mport=125
+echo $s0_mport > $modemportfile
 #[ $(arecord -l | grep "card $s0_scard:" | wc -l) -eq 1 ] || ( echo "Card $s0_scard does not exist."; exit 1 )
 
 ipckey=$(cat /dev/urandom|od -N2 -An -i)
@@ -133,5 +140,5 @@ if [ $s0_type -eq 1 ]; then
 
 #    sleep 1
 
-	watchdog_uniden0.sh $s0_rec $s0_port $s0_scard $s0_bitrate $s0_samplerate $s0_scor $s0_ecor $s0_delay $s0_mindur $s0_timez $s0_ihost $s0_ipass $s0_imount $s0_icao 1>$uwatchdoglog &
+	watchdog_uniden0.sh $s0_rec $s0_port $s0_scard $s0_bitrate $s0_samplerate $s0_scor $s0_ecor $s0_delay $s0_mindur $s0_timez $s0_ihost $s0_ipass $s0_imount $s0_icao $s0_vol 1>$uwatchdoglog &
 fi

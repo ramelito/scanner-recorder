@@ -14,6 +14,7 @@ host=${11}
 pass=${12}
 mount=${13}
 icao=${14}
+vol=${15}
 divm=60
 divs=60
 modf=0
@@ -34,6 +35,15 @@ updatepidfile="/tmp/update${scannerindex}.pid"
 stopfile="/tmp/stop${scannerindex}"
 glgopts="-d /dev/scanners/$scannerindex -t $delay -p $scannerlck"
 elogdir="/tmp/EXT_${scannerindex}"
+
+stty -F /dev/scanners/$scannerindex -icrnl -echo clocal 115200
+
+exec 3<> /dev/scanners/$scannerindex
+
+echo -ne "VOL,$vol\r" >&3
+read  -e -t 1 res <&3
+
+exec 3>&-
 
 host0=$(echo $host | awk -F: '{print $1}')
 port=$(echo $host | awk -F: '{print $2}')
