@@ -21,11 +21,11 @@ mdl="^MDL*"
 
 export TZ=$timez
 scannerhome="/scanner_audio"
-arecordpidfile="/tmp/arecord${scannerindex}.pid"
+arecordpidfile="/tmp/arecord${scardindex}.pid"
 arecordopts="-Dplug:dsnoop${scardindex} -f S16_LE -r $samplerate -c 1 -q -t wav --process-id-file $arecordpidfile"
 lameopts="-S -m m -q9 -b $bitrate -"
 darkconf="/tmp/darkice${scannerindex}.conf"
-darkpidfile="/tmp/darkice${scannerindex}.pid"
+darkpidfile="/tmp/darkice${scardindex}.pid"
 refepochtimefile="/tmp/refepochtime${scannerindex}"
 scannerlck="/tmp/scanner${scannerindex}.lck"
 loggerpidfile="/tmp/logger${scannerindex}.pid"
@@ -93,8 +93,14 @@ record () {
 		 echo " ok!"
 		fi
         	if test -f "/proc/$(cat $splitpidfile)/exe"; then
-		 echo -n "splitter with pid $(cat $splitpidfile) is running. Killing it ..."
- 		 kill -9 $(cat $splitpidfile)
+		 echo -n "logger with pid $(cat $splitpidfile) is running. Killing it ..."
+		 kill $(cat $splitpidfile)
+		 echo " ok!"
+		fi
+        	
+		if test -f "/proc/$(cat $darkpidfile)/exe"; then
+		 echo -n "Darkice with pid $(cat $darkpidfile) is running. Killing it ..."
+		 kill $(cat $darkpidfile)
 		 echo " ok!"
 		fi
 	
@@ -108,13 +114,13 @@ record () {
 		arecord $arecordopts | lame $lameopts "$recfile" &
        		sleep 1.5
        
-                echo -n "Checking if arecord has started..."    
-                if [ ! -f $arecordpidfile -o ! -f "/proc/$(cat $arecordpidfile)/exe" ]; then
-                 test -f "/proc/$(cat $darkpidfile)/exe" && kill -9 $(cat $darkpidfile)
-                 return 1
-                fi
-                echo "ok!"
-
+		echo -n "Checking if arecord has started..." 	
+		if [ ! -f $arecordpidfile -o ! -f "/proc/$(cat $arecordpidfile)/exe" ]; then
+		 test -f "/proc/$(cat $darkpidfile)/exe" && kill -9 $(cat $darkpidfile)
+		 return 1
+		fi
+		echo "ok!"
+	
 		nanos=$(stat -c %z $arecordpidfile | awk -F. '{print $2}')
         	reftime=$(stat -c %Z $arecordpidfile)
 		glgsts $glgopts -l $logfile -i $elogdir -r $reftime.${nanos:0:2} & echo $! > $loggerpidfile
@@ -179,7 +185,6 @@ while (true); do
 #		    echo 0 > $scannerlck; sleep 1
             test -f "/proc/$(cat $arecordpidfile)/exe" && kill -9 $(cat $arecordpidfile)
             test -f "/proc/$(cat $loggerpidfile)/exe" && kill $(cat $loggerpidfile)
-            sleep 5s
             test -f "/proc/$(cat $splitpidfile)/exe" && kill $(cat $splitpidfile)
             modf=1
         fi
@@ -204,7 +209,6 @@ while (true); do
             test -f "/proc/$(cat $loggerpidfile)/exe" && kill $(cat $loggerpidfile)
             test -f "/proc/$(cat $updatepidfile)/exe" && kill $(cat $updatepidfile)
             test -f "/proc/$(cat $splitpidfile)/exe" && kill $(cat $splitpidfile)
-            sleep 5s
 	    rm $stopfile
 	    exit 1
         fi

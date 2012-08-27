@@ -12,36 +12,38 @@ fname=${scannerlog##*/}
 fname2=${fname%.*}
 yymmdd=${fname:0:8}
 hh=${fname:8:2}
-cutlinesfile="/tmp/cutlines${fname:18:3}"
-splitlog="/tmp/split${fname:18:3}.log"
+scannerindex=$(echo $fname | cut -d_ -f 2 | tr -d [:alpha:][:punct:])
+cutlinesfile="/tmp/cutlines${scannerindex}"
+splitlog="/tmp/split${scannerindex}.log"
 record_file="$scannerhome/${yymmdd}/REC/${fname2}.mp3"
-elogdir=/tmp/EXT_${fname:18:3}
+elogdir=/tmp/EXT_${scannerindex}
 mp3spltopts="-Q"
 numlines0=0
 n=0
 code=""
 uids=""
 
-echo "Printing config parameters $1 $2 $3"
-echo "Waiting 60 seconds for data to begin capturing..."
+echo "Printing config parameters $1 $2 $3" > $splitlog
 
-sleep 60
-
-echo "Checking $scannerlog and $record_file for existence."
+echo "Checking $scannerlog and $record_file for existence." >> $splitlog
 
 test $# -eq 0 && exit 1
 test -f $scannerlog || ( echo "$scannerlog does not exists"; exit 1 )
 test -f $record_file || (echo "$record_file does not exists"; exit 1 )
 
-while (true)	
-do
+split () {
 	numlines=$(cat $scannerlog | wc -l)
-    [ $numlines -gt $numlines0 ] && let cutlines=$numlines-$numlines0 || cutlines=0
+    if [ $numlines -gt $numlines0 ]; then 
+	let cutlines=$numlines-$numlines0+3
+	[ $cutlines -gt $numlines ] && cutlines=$numlines
+    else
+	cutlines=0
+    fi
     numlines0=$numlines
     head -n$numlines $scannerlog | tail -n${cutlines} > $cutlinesfile 
     while read line; do
         line=$(echo $line | sed -e 's/ /_/g')
-		system=$(echo $line | cut -d, -f 6 | sed -e 's/^_//g')
+	system=$(echo $line | cut -d, -f 6 | sed -e 's/^_//g')
         group=$(echo $line | cut -d, -f 7 | sed -e 's/^_//g')
         channel=$(echo $line | cut -d, -f 8 | sed -e 's/^_//g')
         freq=$(echo $line | cut -d, -f 2 | sed -e 's/^0*//g')
@@ -77,11 +79,10 @@ do
                 test -d "$dir1" || mkdir -p "$dir1"
                 [ -s "$elogdir/$s0" ] || sleep 3s
                 if [ -s "$elogdir/$s0" ];then
-                    echo "Extracting code. File $elogdir/$s0, size $(stat -c %s $elogdir/$s0)."
+                    echo "Extracting code. File $elogdir/$s0, size $(stat -c %s $elogdir/$s0)." >> $splitlog
                     cut -d, -f 9 "$elogdir/$s0" > "$elogdir/$s0".1
                     code=$(cat "$elogdir/$s0".1 | sort -u | grep "$freq" | tr ' ' '\n' | sed -e '/^$/d' | grep C | tr '\n' '_' | sed -e 's/_$//g')
                 fi
-                [ -e "$elogdir/$s0" ] && rm "$elogdir/$s0"
                 [ -e "$elogdir/$s0".1 ] && rm "$elogdir/$s0".1
 	    	    [ "X$code" != "X" ] && filename="${filename}_${code}"
                 code=""
@@ -96,7 +97,6 @@ do
                     cut -d, -f 7,9 "$elogdir/$s0" | grep UID > "$elogdir/$s0".1 
                     uids=$(cat "$elogdir/$s0".1 | clrsym.sed | tr ' ' '\n' | sed -e '/^$/d' | sed -e "/\b$freq\b/d" | uniq | tr '\n' '_' | sed -e 's/_$//g')
                 fi
-                [ -e "$elogdir/$s0" ] && rm "$elogdir/$s0"
                 [ -e "$elogdir/$s0".1 ] && rm "$elogdir/$s0".1
                 [ "X$uids" != "X" ] && filename="${filename}_${uids}"
                 uids=""
@@ -104,6 +104,23 @@ do
 		    mp3splt $mp3spltopts $record_file $sm.$ss.$sh $em.$es.$eh -d "${dir1}" -o "${filename}" 2>/dev/null
             echo "Splitting ${filename}.mp3 from $record_file to ${dir1}, start $sm.$ss.$sh, end $em.$es.$eh." >> $splitlog
         fi
+        [ -e "$elogdir/$s0" ] && rm "$elogdir/$s0"
     done < $cutlinesfile
-	sleep 1s
+
+}
+
+ctrl_c() {
+	echo "Got termination call" >> $splitlog
+       	split 
+	exit 0
+}
+
+trap ctrl_c SIGTERM
+
+while (true)	
+do
+	echo "Entering cycle..." >> $splitlog
+	sleep 300s
+	echo "Running split func..." >> $splitlog
+	split
 done

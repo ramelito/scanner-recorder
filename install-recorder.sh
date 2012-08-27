@@ -3,34 +3,40 @@
 installpath=/opt/bin
 configpath=/scanner_audio
 
+corefiles[0]='assign_static_address.sh'
+corefiles[1]='code.sh'
+corefiles[2]='extdrv_handler.sh'
+corefiles[3]='simplecn.sh'
+corefiles[4]='usbreset.sh'
+corefiles[5]='recordcleaner.sh'
+corefiles[6]='split_record.sh'
+corefiles[7]='usb_port_no.pm'
+corefiles[8]='split_rename.sh'
+corefiles[9]='clrsym.sed'
+corefiles[10]='update_icecast.sh'
+corefiles[11]='watchdog0.sh'
+corefiles[12]='watchdog_uniden0.sh'
+corefiles[13]='record0.sh'
+corefiles[14]='start3g.sh'
+corefiles[15]='megafon-chat'
+
 echo "Installing recording software onto you board."
 
 test -d $installpath ||  mkdir -p $installpath
 test -d $configpath ||  mkdir -p $configpath
 
 echo -n "Installing scripts... "
-test -f assign_static_address.sh && cp assign_static_address.sh $installpath
-test -f code.sh &&  cp code.sh $installpath 
-test -f extdrv_handler.sh &&  cp extdrv_handler.sh $installpath 
-test -f simplecn.sh &&  cp simplecn.sh $installpath 
-test -f usbreset.sh &&  cp usbreset.sh $installpath
-test -f recordcleaner.sh &&  cp recordcleaner.sh $installpath
-test -f split_record.sh &&  cp split_record.sh $installpath
-test -f usb_port_no.pm &&  cp usb_port_no.pm $installpath
-test -f split_rename.sh &&  cp split_rename.sh $installpath
-test -f clrsym.sed &&  cp clrsym.sed $installpath
-test -f update_icecast.sh &&  cp update_icecast.sh $installpath
-test -f watchdog0.sh &&  cp watchdog0.sh $installpath
-test -f watchdog_uniden0.sh &&  cp watchdog_uniden0.sh $installpath
+
+for corefile in "${corefiles[@]}"; do
+	test -f $corefile && cp $corefile $installpath
+done
+
 test -f record.conf &&  cp record.conf $configpath
-test -f record0.sh &&  cp record0.sh $installpath
-test -f start3g.sh &&  cp start3g.sh $installpath
-test -f megafon-chat &&  cp megafon-chat $installpath
 test -f megafon-peer &&  cp megafon-peer /etc/ppp/peers/ 
 test -f 01defaultroute &&  cp 01defaultroute /etc/ppp/ip-up.d/ 
-test -f record.sh &&  cp record.sh /etc/init.d
-test -f networking &&  cp networking /etc/init.d
-test -f udev &&  cp udev /etc/init.d
+test -f record.sh &&  cp record.sh /etc/init.d/
+test -f networking &&  cp networking /etc/init.d/
+test -f udev &&  cp udev /etc/init.d/
 test -h /etc/rcS.d/S15udev.sh || update-rc.d udev start 15 S .
 test -h /etc/rcS.d/S99record.sh || update-rc.d record.sh start 99 S .
 echo "ok!"
@@ -52,4 +58,8 @@ md5sum1=$(md5sum /tmp/glgsts | awk -F" " '{print $1}')
  chmod +x /tmp/glgsts
  cp /tmp/glgsts $installpath
  rm /tmp/glgsts /tmp/glgsts.md5
+echo "ok!"
+
+echo -n "Setting samba password..."
+echo -ne "recorder\nrecorder\n" | smbpasswd -s
 echo "ok!"
