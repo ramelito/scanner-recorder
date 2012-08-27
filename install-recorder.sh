@@ -32,11 +32,11 @@ for corefile in "${corefiles[@]}"; do
 done
 
 test -f record.conf &&  cp record.conf $configpath
-test -f megafon-peer &&  cp megafon-peer /etc/ppp/peers/ 
 test -f 01defaultroute &&  cp 01defaultroute /etc/ppp/ip-up.d/ 
 test -f record.sh &&  cp record.sh /etc/init.d/
 test -f networking &&  cp networking /etc/init.d/
 test -f udev &&  cp udev /etc/init.d/
+test -f smb.conf &&  cp udev /etc/samba/
 test -h /etc/rcS.d/S15udev.sh || update-rc.d udev start 15 S .
 test -h /etc/rcS.d/S99record.sh || update-rc.d record.sh start 99 S .
 echo "ok!"
