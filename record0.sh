@@ -46,11 +46,11 @@ test "X$s0_scor" == "X" && s0_scor=0
 test "X$s0_ecor" == "X" && s0_ecor=0
 test "X$s0_delay" == "X" && s0_delay="0.8"
 test "X$s0_mindur" == "X" && s0_mindur="2.5"
-test "Xs0_timez" == "X" && s0_timez="UTC"
-test "Xs0_th" == "X" && s0_th="-48"
-test "Xs0_vol" == "X" && s0_vol=4
-test "Xs0_icao" == "X" && s0_icao="UUEE"
-test "Xs0_mport" == "X" && s0_mport=125
+test "X$s0_timez" == "X" && s0_timez="UTC"
+test "X$s0_th" == "X" && s0_th="-48"
+test "X$s0_vol" == "X" && s0_vol=4
+test "X$s0_icao" == "X" && s0_icao="UUEE"
+test "X$s0_mport" == "X" && s0_mport=125
 echo $s0_mport > $modemportfile
 #[ $(arecord -l | grep "card $s0_scard:" | wc -l) -eq 1 ] || ( echo "Card $s0_scard does not exist."; exit 1 )
 

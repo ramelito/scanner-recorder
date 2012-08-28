@@ -63,3 +63,7 @@ echo "ok!"
 echo -n "Setting samba password..."
 echo -ne "recorder\nrecorder\n" | smbpasswd -s recorder
 echo "ok!"
+
+echo -n "Installing crontab jobs..."
+test -e cronjobs && crontab cronjobs
+echo "ok!"
