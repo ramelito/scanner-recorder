@@ -36,7 +36,7 @@ test -f 01defaultroute &&  cp 01defaultroute /etc/ppp/ip-up.d/
 test -f record.sh &&  cp record.sh /etc/init.d/
 test -f networking &&  cp networking /etc/init.d/
 test -f udev &&  cp udev /etc/init.d/
-test -f smb.conf &&  cp udev /etc/samba/
+test -f smb.conf &&  cp smb.conf /etc/samba/
 test -h /etc/rcS.d/S15udev.sh || /usr/sbin/update-rc.d udev start 15 S .
 test -h /etc/rcS.d/S99record.sh || /usr/sbin/update-rc.d record.sh start 99 S .
 echo "ok!"
