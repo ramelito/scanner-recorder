@@ -31,7 +31,7 @@ for corefile in "${corefiles[@]}"; do
 	test -f $corefile && cp $corefile $installpath
 done
 
-test -f record.conf &&  cp record.conf $configpath
+test -f record.conf &&  cp record.conf $configpath/record.conf.example
 test -f 01defaultroute &&  cp 01defaultroute /etc/ppp/ip-up.d/ 
 test -f record.sh &&  cp record.sh /etc/init.d/
 test -f networking &&  cp networking /etc/init.d/
@@ -61,7 +61,7 @@ md5sum1=$(md5sum /tmp/glgsts | awk -F" " '{print $1}')
 echo "ok!"
 
 echo -n "Setting samba password..."
-echo -ne "recorder\nrecorder\n" | smbpasswd -s recorder
+echo -ne "recorder\nrecorder\n" | smbpasswd -a -s recorder
 echo "ok!"
 
 echo -n "Installing crontab jobs..."
