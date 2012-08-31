@@ -79,9 +79,9 @@ split () {
                 test -d "$dir1" || mkdir -p "$dir1"
                 [ -s "$elogdir/$s0" ] || sleep 3s
                 if [ -s "$elogdir/$s0" ];then
-                    echo "Extracting code. File $elogdir/$s0, size $(stat -c %s $elogdir/$s0)." >> $splitlog
                     cut -d, -f 9 "$elogdir/$s0" > "$elogdir/$s0".1
                     code=$(cat "$elogdir/$s0".1 | sort -u | grep "$freq" | tr ' ' '\n' | sed -e '/^$/d' | grep C | tr '\n' '_' | sed -e 's/_$//g')
+                    echo "Extracting code $code. File $elogdir/$s0, size $(stat -c %s $elogdir/$s0)." >> $splitlog
                 fi
                 [ -e "$elogdir/$s0".1 ] && rm "$elogdir/$s0".1
 	    	    [ "X$code" != "X" ] && filename="${filename}_${code}"
@@ -104,7 +104,6 @@ split () {
 		    mp3splt $mp3spltopts $record_file $sm.$ss.$sh $em.$es.$eh -d "${dir1}" -o "${filename}" 2>/dev/null
             echo "Splitting ${filename}.mp3 from $record_file to ${dir1}, start $sm.$ss.$sh, end $em.$es.$eh." >> $splitlog
         fi
-        [ -e "$elogdir/$s0" ] && rm "$elogdir/$s0"
     done < $cutlinesfile
 
 }

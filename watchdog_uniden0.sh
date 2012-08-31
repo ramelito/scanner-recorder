@@ -100,6 +100,7 @@ record () {
         	if test -f "/proc/$(cat $loggerpidfile)/exe"; then
 		 echo -n "logger with pid $(cat $loggerpidfile) is running. Killing it ..."
 		 kill $(cat $loggerpidfile)
+		 test -d "$elogdir" && rm -rf "$elogdir" 
 		 echo " ok!"
 		fi
         	if test -f "/proc/$(cat $splitpidfile)/exe"; then
