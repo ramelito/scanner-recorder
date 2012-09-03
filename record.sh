@@ -39,4 +39,5 @@ for i in $(seq 1 $num); do
         params=$(eval   "echo \$$( echo scanner${i})")
         echo "Starting record0.sh with $params."
 	record0.sh $params $timeout &	
+	sleep 1
 done
