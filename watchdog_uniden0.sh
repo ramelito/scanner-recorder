@@ -15,8 +15,7 @@ pass=${12}
 mount=${13}
 icao=${14}
 vol=${15}
-divm=60
-divs=60
+divm=10
 modf=0
 mdl="^MDL*"
 
@@ -183,17 +182,13 @@ while (true); do
 	min=$(date +%M)
 	sec=$(date +%S)
 	modm=$(expr $min % $divm)
-    	modm5=$(expr $min % 5)
 	recdir=$scannerhome/${yy}${mm}${dd}/REC
 	logdir=$scannerhome/${yy}${mm}${dd}/LOG
-#   	elogdir=$logdir/EXT
 	recfile=${recdir}/${yy}${mm}${dd}${hh}_SCANNER${scannerindex}_${min}.mp3
     	logfile=${logdir}/${yy}${mm}${dd}${hh}_SCANNER${scannerindex}_${min}.log
 
-# 	[ $modm5 -eq 0 ] && /opt/bin/usbreset.sh $scannerindex
 
         if [ $modm -eq 0 -a $modf -eq 0 ]; then
-#		    echo 0 > $scannerlck; sleep 1
             test -f "/proc/$(cat $arecordpidfile)/exe" && kill -9 $(cat $arecordpidfile)
             test -f "/proc/$(cat $loggerpidfile)/exe" && kill $(cat $loggerpidfile)
             test -f "/proc/$(cat $splitpidfile)/exe" && kill $(cat $splitpidfile)

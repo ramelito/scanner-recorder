@@ -29,4 +29,16 @@ generate_config () {
 
 sleep 2
 
-/usr/bin/pon megafon-peer
+/usr/bin/pon megafon-peer &
+
+while (true); do
+
+	$ifppp=$(cat /proc/net/dev | grep ppp0 | cut -d" " -f3)
+	if [ "$ifppp" == "ppp0:" ]; then
+		/usr/bin/pon amelitocom &
+		sleep 5
+		exit 0
+	fi
+	sleep 20
+
+done
