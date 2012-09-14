@@ -1,0 +1,9 @@
+#!/bin/bash
+
+isvpn=/tmp/isvpn
+
+touch $isvpn
+
+echo 0 > $isvpn
+
+/usr/bin/poff amelitocom

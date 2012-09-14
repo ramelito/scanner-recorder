@@ -33,6 +33,8 @@ done
 
 test -f record.conf &&  cp record.conf $configpath/record.conf.example
 test -f 01defaultroute &&  cp 01defaultroute /etc/ppp/ip-up.d/ 
+test -f 10setupvpn &&  cp 10setupvpn /etc/ppp/ip-up.d/ 
+test -f 90removepvpn &&  cp 90removevpn /etc/ppp/ip-down.d/ 
 test -f record.sh &&  cp record.sh /etc/init.d/
 test -f networking &&  cp networking /etc/init.d/
 test -f udev &&  cp udev /etc/init.d/

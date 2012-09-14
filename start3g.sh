@@ -1,44 +1,26 @@
 #!/bin/bash
 
-modemportfile="/tmp/modemport"
+echo "debug
 
-test -e $modemportfile && mport=$(cat $modemportfile) || mport=125
+/dev/modems/$1
 
-generate_config () {
-	echo "debug
+noauth
+defaultroute
+usepeerdns
+updetach
+persist
+noipdefault
+novjccomp
+nopcomp
+noaccomp
+nodeflate
+novj
+nobsdcomp
+passive
+name gdata
 
-	/dev/modems/$mport
-
-	noauth
-	defaultroute
-	usepeerdns
-	updetach
-	persist
-	noipdefault
-	novjccomp
-	nopcomp
-	noaccomp
-	nodeflate
-	novj
-	nobsdcomp
-	passive
-	name gdata
-
-	connect '/usr/sbin/chat -v -f /opt/bin/megafon-chat'" > /etc/ppp/peers/megafon-peer
-}
+connect '/usr/sbin/chat -v -f /opt/bin/megafon-chat'" > /etc/ppp/peers/megafon-peer
 
 sleep 2
 
 /usr/bin/pon megafon-peer &
-
-while (true); do
-
-	$ifppp=$(cat /proc/net/dev | grep ppp0 | cut -d" " -f3)
-	if [ "$ifppp" == "ppp0:" ]; then
-		/usr/bin/pon amelitocom &
-		sleep 5
-		exit 0
-	fi
-	sleep 20
-
-done
