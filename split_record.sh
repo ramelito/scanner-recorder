@@ -71,7 +71,7 @@ split () {
     		ss=$(expr $ss % 60)
 	    	em=$(expr $es / 60)
 		    es=$(expr $es % 60)
-    		filename_date_part=$(date -d @$s0 +%Y_%m_%d_%H_%M_%S)
+    		filename_date_part=$(date -d @$s0 +%Y-%m-%d_%Hh%Mm%Ss)
             if [[ "$freq" =~ \. ]]; then
 	    	    filename="${filename_date_part}_${freq}_MHz"
 	            dir1="${scannerhome}/${yymmdd}/${system}/${group}/${channel}/${hh}"

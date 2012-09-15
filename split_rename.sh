@@ -42,7 +42,7 @@ spltrename() {
     		[ ${shiftmins:0:1} == 0 ] && shiftmins=${shiftmins:1:1}
     		let shiftsecs=${shiftmins}*60+$shiftsecs
     		let dpepoch=$dpepoch+$shiftsecs
-    		newfile=${mp3spltrecdir}/$(date -d "@$dpepoch" +%Y%m%d%H%M%S)
+    		newfile=${mp3spltrecdir}/$(date -d "@$dpepoch" +%Y-%m-%d_%Hh%Mm%Ss)
 		if [ ! -f ${newfile}.mp3 ]; then
 			echo "[$(date)] Soxing ${newfile}.wav." >> $logfile
 			sox ${mp3spltrecdir}/${line} ${newfile}.wav $soxopts
