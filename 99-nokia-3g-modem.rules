@@ -1,2 +1,0 @@
-KERNEL=="ttyACM0",ACTION=="add",SUBSYSTEM=="tty",ATTRS{manufacturer}=="Nokia",ATTRS{product}=="Nokia E61i",RUN+="/opt/bin/start3g.sh"
-KERNEL=="ttyACM0",ACTION=="remove",SUBSYSTEM=="tty",ATTRS{manufacturer}=="Nokia",ATTRS{product}=="Nokia E61i",RUN+="/usr/bin/killall pppd"

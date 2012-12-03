@@ -25,6 +25,7 @@ err_lvl=10
 inf_lvl=50
 dbg_lvl=99
 
+workbin=/opt/bin
 _scanner_audio="/media/mmcblk0p1/scanner_audio"
 scanner_audio="/scanner_audio"
 config="$scanner_audio/record.conf"
@@ -50,9 +51,18 @@ echo "Recorder usage help.
 			10 - error, 
 			50 - info, 
 			99 - debug
+	--install	install software on box
+	--with-udev	install udev
+	--with-udvrls	install udev rules
+	--with-crnjbs	install cron jobs
+	--with-smbcfg	install samba config
+	--with-smbpwd	install samba passwords
+	
 	--config	config file location
 	--start		starting recorders using record.conf file
 	--wstart	starting watchdog
+	--split		split function init
+	--update	update function init
 	--type		scanner type
 			0 - uncontrolled
 			1 - uniden
@@ -77,12 +87,20 @@ echo "Recorder usage help.
 	--srate		sample rate for arecord and darkice
 	--brate		bitrate for arecord and darkice
 	--divm		modulo for audio rotation
-	--split		split function init
 	--log-file	log file for split
 	--rec-file	rec file for split
 	--split-dir	directory for split
 	--template	template for mp3splt
-	--update	update function init
+	--extdrive	manage external drive connection
+	--usbdev	usb device for external drive connection
+	--mntpnt	mount point for external drive connection
+	--mntopts	mount options for mount point for extdrive
+	--mngaddr	manage ip address
+	--intf		interface name to manage
+	--clean		clean old files procedure
+	--modem-up	modem up function
+	--misp		mobile internet service provider (e.g. megafon)
+	--mport		modem port
 "
 exit 0
 }
@@ -114,8 +132,9 @@ _debug () {
 chk_sw () {
 
 	local fail=0
-	local sw_list="ifconfig route ping ntpdate mktemp env cat wc od bc tr stty"
+	local sw_list="ifconfig route ping ntpdate mktemp env cat wc od bc tr stty samba"
 	sw_list="$sw_list arecord lame darkice mp3splt stat glgsts sox head uniq curl"
+	sw_list="$sw_list smbpasswd update-rc.d wget md5sum df find uname"
 
 	_notify "Check installed software."
 
@@ -924,10 +943,281 @@ ctrl_c () {
 	exit 1
 }
 
+install () {
+
+	_notify "installing software on the box."
+	_debug "_udev is $_udev."
+	_debug "_udvrls is $_udvrls." 
+	_debug "_crnjbs is $_crnjbs." 
+	_debug "_smbcfg is $_smbcfg." 
+	_debug "_smbpwd is $_smbpwd." 
+
+	local sw_list="recorder.sh code.sh usb_port_no.sh clrsym.sed megafon-chat"
+
+	for file in $sw_list; do
+		if test -f $file; then 
+			_debug "copying $file to $workbin/"
+			cp -v $file $workbin/
+		fi
+	done
+
+
+	if test -f record.conf; then 
+		_debug "copying record.conf to $scanner_audio/record.conf.example"
+		cp -v record.conf $scanner_audio/record.conf.example
+	fi
+
+	if [ "$_udev" == 1 ]; then	
+
+		_debug "copying networking and udev scripts tp /etc/init.d"
+		test -f networking &&  cp -r networking /etc/init.d/
+		test -f udev &&  cp udev /etc/init.d/
+		test -h /etc/rcS.d/S15udev.sh || /usr/sbin/update-rc.d udev start 15 S .
+	fi
+
+	if [ "$_smbcfg" == 1 ]; then
+	
+		_debug "copying smb.conf to /etc/samba"
+		test -f smb.conf &&  cp smb.conf /etc/samba/
+	fi
+
+	if [ "$_smbpwd" == 1 ]; then
+
+		_info "setting samba password..."
+		echo -ne "recorder\nrecorder\n" | smbpasswd -a -s recorder
+
+	fi
+
+	_debug "making symlink for recorder.sh to S99recorder.sh"
+	cp -v recorder.sh /etc/init.d/
+	test -h /etc/rcS.d/S99recorder.sh || /usr/sbin/update-rc.d recorder.sh start 99 S .
+
+	if [ "$_udvrls" == 1 ]; then
+
+		_debug "copying udev rules to /etc/udev/rules.d/"
+		test -f 99-usb-serial.rules && cp 99-usb-serial.rules /etc/udev/rules.d/
+		test -f 99-usb-sound.rules && cp 99-usb-sound.rules /etc/udev/rules.d/
+		test -f 99-usb-storage-mgmt.rules && cp 99-usb-storage-mgmt.rules /etc/udev/rules.d/
+	fi
+
+	local arch=$(uname -m)
+
+	_info "downloading glgsts utility for arch $arch."
+	wget http://www.amelito.com/rec/${arch}/glgsts -O glgsts -q
+	wget http://www.amelito.com/rec/${arch}/glgsts.md5 -O glgsts.md5 -q
+	local ok=$(md5sum -c glgsts.md5 | cut -d: -f2 | sed -e 's/ //g')
+	if [ "$ok" != "OK" ]; then
+		_error "md5 check sum failed."
+		exit 1
+	else
+		chmod +x glgsts
+		cp -r glgsts $workbin/
+		rm glgsts glgsts.md5
+	fi
+
+	if [ "$_crnjbs" == 1 ]; then
+		_info "installing crontab jobs..."
+		test -e cronjobs && crontab cronjobs
+	fi
+}
+
+extdrive () {
+
+	_info "got new device:usb_device=$usb_device"
+	_info "mount_point=$mount_point mount_options=$mount_options" 
+	_info "and action $ACTION."
+
+	if test -L $scanner_audio; then
+		_error "$scanner_audio not exists, exiting..."
+		exit 1
+	fi
+
+	_debug "stop recording."
+
+	for file in $(ls /tmp/stop*); do
+    		test -e $file && echo 1 > $file
+	done
+
+	sleep 10
+
+	mounted_usb_disk=$(mount | grep $mount_point | awk '{print $1}')
+
+	_notify "mounted_usb_disc=$mounted_usb_disk."
+
+	if [ "A$mounted_usb_disk" != "A" -a "$ACTION" == "add" ]; then
+		_info "ACTION=$ACTION."
+		_info "deleting $scanner_audio symlink."
+        	test -L $scanner_audio && rm $scanner_audio
+	        _info "umounting $mntpnt."
+	        umount -l "$mntpnt"
+        	mount -o "$mntopts" "$usbdev" "$mntpnt"
+	        mkdir -p "$mntpnt/scanner_audio"
+        	ln -s "$mntpnt/scanner_audio" $scanner_audio
+	fi
+
+	if [ "$ACTION" == "remove" ]; then
+		_info "ACTION=$ACTION."
+		_info "deleting $scanner_audio symlink."
+        	test -L $scanner_audio && rm $scanner_audio
+	        _info "umounting $mntpnt."
+        	umount -l "$mntpnt"
+        	rmdir "$mntpnt"
+        	ln -s $_scanner_audio $scanner_audio
+	fi
+
+	_debug "starting recording."
+
+	recorder.sh --verbose $verbose --start --config $config
+}
+
+mngaddr () {
+
+	_info "checking ip address on eth0."
+
+	if test "X${intf}_address" == "X"; then
+		_info "static address is in use."
+		exit 0
+	fi
+
+	local inet=$(/sbin/ifconfig $intf | grep "inet addr" | wc -l)
+	local opstate=$(/bin/cat /sys/class/net/$intf/operstate)
+
+	_debug "inet is $inet."
+	_debug "opstate is $opstate."
+
+	case "$opstate" in
+	    "down")
+	        if [ "$inet" == "1" ]; then
+        	    	_notify "link is down, lets stop samba and remove address."
+	        	/etc/init.d/samba stop
+		       	sleep 3
+	        	/bin/ip addr flush $intf
+	        fi
+        	;;
+    	     *)
+	        if [ "$inet" == "0" ]; then
+            		_notify "link is up, lets get address and start samba."
+		        /sbin/udhcpc $intf
+		        sleep 3
+		        /etc/init.d/samba start
+        	fi
+        	;;
+	esac
+}
+
+clean () {
+
+	local clrlist=$(mktemp)
+	local pid=/tmp/clean.pid
+
+	test -f $pid || touch $pid
+
+	_notify "start record cleaning."
+	_debug "create list file $clrlist."
+
+	if test -f "/proc/$(cat $pid)/exe"; then
+		_info "copy of cleaning is already running."
+		exit 0
+	fi
+
+	echo $$ > $pid
+
+	let onehourleft=2*4*brate*3600*1000/8
+
+	_info "free at least $onehourleft bytes."
+
+	if [ -f $config ]; then
+		source $config
+	fi
+
+	cd $scanner_audio
+
+	kbytes=$(df . | tail -1 | awk -F" " '{print $4}')
+	let bytes=kbytes*1024
+
+	_info "now there are $bytes free bytes."
+
+	if [ $bytes -ge $onehourleft ]; then
+		_info "$bytes greater $onehourleft, exiting."
+		_debug "remove $clrlist."
+		rm $clrlist
+		exit 0
+	fi
+
+	_info "building list of files ..."
+
+	find . -printf "%A@ %p\n" | sort -n > $clrlist
+
+	_info "reading list until free needed space."
+
+	while [ $bytes -lt $onehourleft ]; do
+		file=$(cat $clrlist | head -1 | awk -F" " '{print $2}')
+		if [ ! -d $file ]; then
+		        rm $file
+			_debug "removing file $file."
+			kbytes=$(df . | tail -1 | awk -F" " '{print $4}')
+			let bytes=kbytes*1024
+	  		_debug "$bytes bytes free."
+			xpath=${file%/*}
+			if [ "X$(ls -1A $xpath)" == "X" ]; then
+				_debug "$xpath directory is empty, let's delete it."
+				rmdir $xpath
+	    		fi
+    		else
+        		if [ "X$(ls -1A $file)" == "X" ]; then
+		        	_info "$file directory is empty, let's delete it."
+            			rmdir $file
+	    		fi
+    		fi
+		tail -n+2 $clrlist > ${clrlist}.new
+		mv ${clrlist}.new $clrlist
+	done
+	_debug "remove $clrlist."
+	rm $clrlist
+}
+
+modem_up () {
+
+	_notify "establishing mobile connection."
+
+	case "$misp" in
+
+		"megafon")
+			_info "using Megafon."
+
+			echo "debug
+			/dev/modems/$mport
+			noauth
+			defaultroute
+			usepeerdns
+			updetach
+			persist
+			noipdefault
+			novjccomp
+			nopcomp
+			noaccomp
+			nodeflate
+			novj
+			nobsdcomp
+			passive
+			name gdata
+			connect '/usr/sbin/chat -v -f /opt/bin/megafon-chat'" > /etc/ppp/peers/megafon-peer
+
+			sleep 2
+
+			/usr/bin/pon megafon-peer &
+			;;
+	esac
+}
+
 shortopts="h"
 
 #global keys
-longopts="help,verbose:"
+longopts="help,verbose:,extdrive,usbdev:,mntpnt:,mntopts:,mngaddr,intf:,clean"
+longopts="$longopts,modem-up,misp:,mport:"
+
+#install keys
+longopts="$longopts,install,with-udev,with-udvrls,with-smbcfg,with-smbpwd,with-crnjbs"
 
 #starter keys
 longopts="$longopts,start,stop,restart,config:"
@@ -956,6 +1246,12 @@ while true ; do
                 -h|--help) usage ; break ;;
 		--verbose) verbose=$2; shift 2;;
 		--start) ms_action="start"; shift ;;
+		--install) _install=1; shift ;;
+		--with-udev) _udev=1; shift ;;
+		--with-udvrls) _udvrls=1; shift ;;
+		--with-smbcfg) _smbcfg=1; shift ;;
+		--with-smbpwd) _smbpwd=1; shift ;;
+		--with-crnjbs) _crnjbs=1; shift ;;
 		--config) config=$2; shift 2;;
 		--wstart) wstart=1; shift;;
 		--type) type=$2; shift 2;;
@@ -985,6 +1281,16 @@ while true ; do
 		--split-dir) split_dir=$2; shift 2;;
 		--template) _template=$2; shift 2;;
 		--update) _update=1; shift;;
+		--extdrive) _extdrive=1; shift ;;
+		--usbdev) usbdev=$2; shift 2;;
+		--mntpnt) mntpnt="$2"; shift 2;;
+		--mntopts) mntopts="$2"; shift 2;;
+		--mngaddr) _mngaddr=1; shift ;;
+		--intf) intf=$2; shift 2;;
+		--clean) _clean=1; shift ;;
+		--modem-up) _modem_up=1; shift;;
+		--misp) misp=$2; shift 2;;
+		--mport) mport=$2; shift 2;;
                 --) shift ; break ;;
                 *) _error "Parsing variables failed!" ; exit 1 ;;
         esac
@@ -1027,3 +1333,18 @@ test "$_split" == 1 && split
 
 _debug "update value is $_update"
 test "$_update" == 1 && update 
+
+_debug "install value is $_install"
+test "$_install" == 1 && install
+
+_debug "external drive is $_extdrive"
+test "$_extdrive" == 1 && extdrive
+
+_debug "mngaddr is $_mngaddr"
+test "$_mngaddr" == 1 && mngaddr
+
+_debug "clean is $_clean"
+test "$_clean" == 1 && clean
+
+_debug "modem_up is $_modem_up"
+test "$_modem_up" == 1 && modem_up

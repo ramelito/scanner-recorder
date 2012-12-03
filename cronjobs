@@ -1,5 +1,5 @@
 #MAILTO=""
 30 * * * *    /usr/bin/ntpdate -b -s -u pool.ntp.org
 *  * * * *    /etc/init.d/save-rtc.sh
-*  * * * *    /opt/bin/simplecn.sh
-*/5 * * * *   /opt/bin/recordcleaner.sh
+*  * * * *    /opt/bin/recorder.sh --mngaddr --intf eth0
+*/5 * * * *   /opt/bin/recorder.sh --clean --brate 48
