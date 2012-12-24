@@ -1,0 +1,14 @@
+This is recording and livecasting software with ability to communicate with Uniden scanners.
+
+See sample record.conf file to understand how configuration parameters work.
+
+To install software:
+
+	git clone git://github.com/ramelito/scanner-recorder.git
+	cd scanner-recorder
+	sudo ./recorder.sh --install
+
+To find out usb ports:
+
+	aplay -l
+	ls -l /dev/scanners/

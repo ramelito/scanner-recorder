@@ -26,9 +26,8 @@ inf_lvl=50
 dbg_lvl=99
 
 workbin=/opt/bin
-_scanner_audio="/media/mmcblk0p1/scanner_audio"
 scanner_audio="/scanner_audio"
-config="$scanner_audio/record.conf"
+config="/opt/etc/record.conf"
 asound_conf="/etc/asound.conf"
 hardware="beagle"
 ms_action=""
@@ -52,14 +51,12 @@ echo "Recorder usage help.
 			50 - info, 
 			99 - debug
 	--install	install software on box
-	--with-udev	install udev
 	--with-udvrls	install udev rules
 	--with-crnjbs	install cron jobs
-	--with-smbcfg	install samba config
-	--with-smbpwd	install samba passwords
 	
 	--config	config file location
 	--start		starting recorders using record.conf file
+	--stop		stopping recorders using record.conf file
 	--wstart	starting watchdog
 	--split		split function init
 	--update	update function init
@@ -132,9 +129,9 @@ _debug () {
 chk_sw () {
 
 	local fail=0
-	local sw_list="ifconfig route ping ntpdate mktemp env cat wc od bc tr stty samba"
+	local sw_list="ifconfig route ping ntpdate mktemp env cat wc od bc tr stty"
 	sw_list="$sw_list arecord lame darkice mp3splt stat glgsts sox head uniq curl"
-	sw_list="$sw_list smbpasswd update-rc.d wget md5sum df find uname"
+	sw_list="$sw_list insserv wget md5sum df find uname"
 
 	_notify "Check installed software."
 
@@ -226,9 +223,12 @@ main_starter () {
 			asgn_addr;
 			chk_net;
 
+			_notify "throttling processor."
+			cpufreq-set -g performance
+
 			num=$(cat $config | grep ^scanner[0-9]* | wc -l)
-			_info "found $num config lines."	
-			test -L $scanner_audio || ln -s $_scanner_audio $scanner_audio
+			_info "found $num config lines."
+			test -d $scanner_audio || mkdir $scanner_audio	
 			_debug "remove previous asound.conf."	
 			test -f $asound_conf && rm $asound_conf
 
@@ -281,8 +281,14 @@ main_starter () {
         			recorder.sh $opts &
 			        sleep 1
 			done
-		
 			;;
+		stop)
+			_notify "Stopping recorders."
+			for stops in $(ls /tmp/stop*); do
+				_notify "stopping recorder ($stops)."
+				echo 1 > $stops
+			done
+		;;
 	esac
 }
 
@@ -649,7 +655,9 @@ update () {
 
 	while (true); do
 
-	        yyyymmdd=$(date +%Y%m%d)
+	        sleep 1
+	        
+		yyyymmdd=$(date +%Y%m%d)
 
 		logdir=${scanner_audio}/$yyyymmdd/LOG		
 
@@ -679,7 +687,6 @@ update () {
                 	webaddr="http://${ihost}:${iport}/admin/metadata?mount=/${imount}&mode=updinfo&song=$curline+$metar"
 	                curl -o $curlout -s -u source:${ipass} $webaddr
         	fi
-	        sleep 1
         	prevline="$curline";
 	done
 }
@@ -952,6 +959,10 @@ install () {
 	_debug "_smbcfg is $_smbcfg." 
 	_debug "_smbpwd is $_smbpwd." 
 
+	_notify "creating directories."
+	mkdir -p $workbin
+	mkdir -p /opt/etc
+
 	local sw_list="recorder.sh code.sh usb_port_no.sh clrsym.sed megafon-chat"
 
 	for file in $sw_list; do
@@ -961,36 +972,14 @@ install () {
 		fi
 	done
 
-
 	if test -f record.conf; then 
-		_debug "copying record.conf to $scanner_audio/record.conf.example"
-		cp -v record.conf $scanner_audio/record.conf.example
+		_debug "copying record.conf to /opt/etc/record.conf.example"
+		cp -v record.conf /opt/etc/record.conf.example
 	fi
 
-	if [ "$_udev" == 1 ]; then	
-
-		_debug "copying networking and udev scripts tp /etc/init.d"
-		test -f networking &&  cp -r networking /etc/init.d/
-		test -f udev &&  cp udev /etc/init.d/
-		test -h /etc/rcS.d/S15udev.sh || /usr/sbin/update-rc.d udev start 15 S .
-	fi
-
-	if [ "$_smbcfg" == 1 ]; then
-	
-		_debug "copying smb.conf to /etc/samba"
-		test -f smb.conf &&  cp smb.conf /etc/samba/
-	fi
-
-	if [ "$_smbpwd" == 1 ]; then
-
-		_info "setting samba password..."
-		echo -ne "recorder\nrecorder\n" | smbpasswd -a -s recorder
-
-	fi
-
-	_debug "making symlink for recorder.sh to S99recorder.sh"
-	cp -v recorder.sh /etc/init.d/
-	test -h /etc/rcS.d/S99recorder.sh || /usr/sbin/update-rc.d recorder.sh start 99 S .
+	_debug "installing initrec script"
+	cp -v initrec /etc/init.d/
+	insserv initrec
 
 	if [ "$_udvrls" == 1 ]; then
 
@@ -1062,7 +1051,6 @@ extdrive () {
 	        _info "umounting $mntpnt."
         	umount -l "$mntpnt"
         	rmdir "$mntpnt"
-        	ln -s $_scanner_audio $scanner_audio
 	fi
 
 	_debug "starting recording."
@@ -1217,7 +1205,7 @@ longopts="help,verbose:,extdrive,usbdev:,mntpnt:,mntopts:,mngaddr,intf:,clean"
 longopts="$longopts,modem-up,misp:,mport:"
 
 #install keys
-longopts="$longopts,install,with-udev,with-udvrls,with-smbcfg,with-smbpwd,with-crnjbs"
+longopts="$longopts,install,with-udvrls,with-crnjbs"
 
 #starter keys
 longopts="$longopts,start,stop,restart,config:"
@@ -1246,11 +1234,9 @@ while true ; do
                 -h|--help) usage ; break ;;
 		--verbose) verbose=$2; shift 2;;
 		--start) ms_action="start"; shift ;;
+		--stop) ms_action="stop"; shift ;;
 		--install) _install=1; shift ;;
-		--with-udev) _udev=1; shift ;;
 		--with-udvrls) _udvrls=1; shift ;;
-		--with-smbcfg) _smbcfg=1; shift ;;
-		--with-smbpwd) _smbpwd=1; shift ;;
 		--with-crnjbs) _crnjbs=1; shift ;;
 		--config) config=$2; shift 2;;
 		--wstart) wstart=1; shift;;
@@ -1302,7 +1288,7 @@ done
 trap ctrl_c SIGTERM
 
 _debug "ms_action is $ms_action"
-test "$ms_action" == "start" && main_starter
+main_starter
 
 _debug "wstart value is $wstart"
 test "$wstart" == 1 && wdog_starter

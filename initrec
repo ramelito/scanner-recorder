@@ -1,0 +1,30 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides:             recorder
+# Required-Start:       $remote_fs $syslog
+# Required-Stop:        $remote_fs $syslog
+# Default-Start:        S
+# Default-Stop:         0 6
+# Short-Description:    Scanner Recorder Software
+### END INIT INFO
+
+config=/opt/etc/record.conf
+
+test -e $config || exit 1
+
+test -e /opt/bin/recorder.sh || exit 1
+
+case "$1" in
+  start)
+	/opt/bin/recorder.sh --start --config $config
+	;;
+  stop) 
+	/opt/bin/recorder.sh --stop --config $config
+	;;
+  restart)
+	initrec stop
+	sleep 10
+	initrec start
+	;;
+esac
