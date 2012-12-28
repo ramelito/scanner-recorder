@@ -304,37 +304,19 @@ wdog_starter () {
 
 	if [ $scard -eq 0 ]; then
 		
-		case "$hardware" in
-		"beagle")
-			echo "pcm.dsnoop0 {
-			        type dsnoop
-        			    ipc_key $ipckey
-			            slave {
-       				 	    pcm {
-                				type hw
-	                			card omap3beagle
-	        	        		device 0
-			            	}
-	        		    rate 16000
-		        	    channels 1
-	        		}
+		echo "pcm.dsnoop0 {
+		        type dsnoop
+        		    ipc_key $ipckey
+		            slave {
+       			 	    pcm {
+                			type hw
+	               			card $hardware
+	                		device 0
+		            	}
+	        		rate 16000
+		        	channels 1
+	        	}
 		    } " >> $asound_conf
-		    ;;
-		"HDA_Intel_PCH")
-			echo "pcm.dsnoop0 {
-			        type dsnoop
-        			    ipc_key $ipckey
-			            slave {
-       				 	    pcm {
-                				type hw
-	                			card PCH 
-	        	        		device 0
-			            	}
-	        		    rate 16000
-		        	    channels 1
-	        		}
-		    } " >> $asound_conf
-		esac
 	else
 		echo "pcm.dsnoop$scard {
 			type dsnoop
@@ -393,6 +375,8 @@ wdog_starter () {
         	while (true); do
         		if [ -L /dev/scanners/$port ]; then
             			stty -F /dev/scanners/$port 115200 raw
+				_info "Sending cmd VOL,$vol to port $sport"
+				/opt/bin/sendcmd.sh -s$sport -c VOL,$vol
             			break;
         		fi
         	done
@@ -953,17 +937,14 @@ ctrl_c () {
 install () {
 
 	_notify "installing software on the box."
-	_debug "_udev is $_udev."
 	_debug "_udvrls is $_udvrls." 
 	_debug "_crnjbs is $_crnjbs." 
-	_debug "_smbcfg is $_smbcfg." 
-	_debug "_smbpwd is $_smbpwd." 
 
 	_notify "creating directories."
 	mkdir -p $workbin
 	mkdir -p /opt/etc
 
-	local sw_list="recorder.sh code.sh usb_port_no.sh clrsym.sed megafon-chat"
+	local sw_list="recorder.sh code.sh usb_port_no.sh clrsym.sed megafon-chat sendcmd.sh"
 
 	for file in $sw_list; do
 		if test -f $file; then 
