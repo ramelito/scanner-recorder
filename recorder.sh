@@ -107,6 +107,7 @@ exit 0
 _log () {
     if [ $verbose -ge $1 ]; then
         echo -e "$2" | fold -w140 -s | sed '2~1s/^/  /'
+	logger -t RECORDER "$2"
     fi
 }
 
@@ -131,7 +132,7 @@ chk_sw () {
 	local fail=0
 	local sw_list="ifconfig route ping ntpdate mktemp env cat wc od bc tr stty"
 	sw_list="$sw_list arecord lame darkice mp3splt stat glgsts sox head uniq curl"
-	sw_list="$sw_list insserv wget md5sum df find uname"
+	sw_list="$sw_list insserv wget md5sum df find uname logger"
 
 	_notify "Check installed software."
 
