@@ -132,7 +132,7 @@ chk_sw () {
 	local fail=0
 	local sw_list="ifconfig route ping ntpdate mktemp env cat wc od bc tr stty"
 	sw_list="$sw_list arecord lame darkice mp3splt stat glgsts sox head uniq curl"
-	sw_list="$sw_list insserv wget md5sum df find uname logger"
+	sw_list="$sw_list insserv wget md5sum df find uname logger gcc"
 
 	_notify "Check installed software."
 
@@ -682,6 +682,7 @@ record () {
 
 	local sw_killed=0
 	touch $apf
+	touch $scanner_lck
 
         local exe1="/proc/$(cat $apf)/exe"
         local exe2="/proc/$(cat $spf)/exe"
@@ -976,18 +977,8 @@ install () {
 
 	local arch=$(uname -m)
 
-	_info "downloading glgsts utility for arch $arch."
-	wget http://www.amelito.com/rec/${arch}/glgsts -O glgsts -q
-	wget http://www.amelito.com/rec/${arch}/glgsts.md5 -O glgsts.md5 -q
-	local ok=$(md5sum -c glgsts.md5 | cut -d: -f2 | sed -e 's/ //g')
-	if [ "$ok" != "OK" ]; then
-		_error "md5 check sum failed."
-		exit 1
-	else
-		chmod +x glgsts
-		cp -r glgsts $workbin/
-		rm glgsts glgsts.md5
-	fi
+	_info "compiling glgsts utility for arch $arch."
+	gcc glgsts.c -o /opt/bin/glgsts
 
 	if [ "$_crnjbs" == 1 ]; then
 		_info "installing crontab jobs..."
