@@ -29,7 +29,7 @@ workbin=/opt/bin
 scanner_audio="/scanner_audio"
 config="/opt/etc/record.conf"
 asound_conf="/etc/asound.conf"
-hardware="beagle"
+hardware="omap3beagle"
 ms_action=""
 wstart=""
 _wdog=""
@@ -380,6 +380,7 @@ wdog_starter () {
 				/opt/bin/sendcmd.sh -s$sport -c VOL,$vol
             			break;
         		fi
+			sleep 1
         	done
 	fi
 
