@@ -29,7 +29,7 @@ workbin=/opt/bin
 scanner_audio="/scanner_audio"
 config="/opt/etc/record.conf"
 asound_conf="/etc/asound.conf"
-hardware="omap3beagle"
+hardware="beagle"
 ms_action=""
 wstart=""
 _wdog=""
@@ -107,7 +107,7 @@ exit 0
 _log () {
     if [ $verbose -ge $1 ]; then
         echo -e "$2" | fold -w140 -s | sed '2~1s/^/  /'
-	logger -t RECORDER "$2"
+	logger -t recorder.sh "$2"
     fi
 }
 
@@ -380,7 +380,6 @@ wdog_starter () {
 				/opt/bin/sendcmd.sh -s$sport -c VOL,$vol
             			break;
         		fi
-			sleep 1
         	done
 	fi
 
@@ -437,6 +436,8 @@ split0 () {
 	_debug "preparing $list for list of files to process."
         ls $split_dir | grep RAWSPLIT > $list
         numlines=$(cat $list | wc -l)
+	_notify "$numlines found after split."
+
         if [ "$numlines" == "0" ]; then
 		rm $list
 		return 0
@@ -496,7 +497,7 @@ split1 () {
 	test -f $rec_file || ( _error "$rec_file does not exists"; exit 1 )
 
         numlines=$(cat $log_file | wc -l)
-	_info "$numlines counted in $log_file."
+	_notify "$numlines found in $log_file."
 
    	if [ $numlines -gt $numlines0 ]; then
         	let cutlines=$numlines-$numlines0+3
@@ -616,7 +617,7 @@ split () {
 
 	while (true); do
 	
-		sleep 300
+		sleep $divm 
 		case "$type" in
 			0)
 			split0
@@ -680,6 +681,7 @@ update () {
 record () {
 
 	local sw_killed=0
+	touch $apf
 
         local exe1="/proc/$(cat $apf)/exe"
         local exe2="/proc/$(cat $spf)/exe"
@@ -750,7 +752,7 @@ record () {
        opts="$opts --icao $icao --scor $scor --ecor $ecor"
        opts="$opts --delay $delay --mindur $mindur --timez $timez"
        opts="$opts --th $th --vol $vol --srate $srate --brate $brate"
-       opts="$opts --verbose $verbose"
+       opts="$opts --divm $divm --verbose $verbose"
 
 	if [ $type -gt 0 ]; then
 		local nanos=$(stat -c %z $apf | cut -d. -f2)
@@ -884,14 +886,14 @@ wdog () {
 			;;
 		esac
 
-		if [ $modm -eq 0 -a $modf -eq 0 ]; then
-			test -f "/proc/$(cat $apf)/exe" && kill -9 $(cat $apf)
-                        test -f "/proc/$(cat $lpf)/exe" && kill $(cat $lpf)
-                        test -f "/proc/$(cat $spf)/exe" && kill $(cat $spf)
-            		modf=1
-        	fi
+#		if [ $modm -eq 0 -a $modf -eq 0 ]; then
+#			test -f "/proc/$(cat $apf)/exe" && kill -9 $(cat $apf)
+#                        test -f "/proc/$(cat $lpf)/exe" && kill $(cat $lpf)
+#                        test -f "/proc/$(cat $spf)/exe" && kill $(cat $spf)
+#            		modf=1
+#        	fi
 
-		sleep 15s
+		sleep 5
 
         	[ "$modm" != 0 ] && modf=0
 
@@ -1106,10 +1108,10 @@ clean () {
 	kbytes=$(df . | tail -1 | awk -F" " '{print $4}')
 	let bytes=kbytes*1024
 
-	_info "now there are $bytes free bytes."
+	_info "there are $bytes free bytes."
 
 	if [ $bytes -ge $onehourleft ]; then
-		_info "$bytes greater $onehourleft, exiting."
+		_notify "$bytes greater $onehourleft, exiting."
 		_debug "remove $clrlist."
 		rm $clrlist
 		exit 0
@@ -1145,6 +1147,9 @@ clean () {
 	done
 	_debug "remove $clrlist."
 	rm $clrlist
+	
+	kbytes=$(df . | tail -1 | awk -F" " '{print $4}')
+	_notify "$kbytes available after cleaning."
 }
 
 modem_up () {
@@ -1284,7 +1289,8 @@ upf="/tmp/update${port}.pid"
 
 scanner_lck="/tmp/scanner${port}.lck"
 
-aopts="-Dplug:dsnoop${scard} -f S16_LE -r $srate -c 1 -q -t wav --process-id-file $apf"
+aopts="-Dplug:dsnoop${scard} -f S16_LE -r $srate"
+aopts="$aopts -c 1 -q -t wav -d $divm --process-id-file $apf"
 lopts="-S -m m -q9 -b $brate -"
 gopts="-d /dev/scanners/${port} -t $delay -p $scanner_lck"
 
