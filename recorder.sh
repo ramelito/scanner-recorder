@@ -682,7 +682,6 @@ record () {
 
 	local sw_killed=0
 	touch $apf
-	touch $scanner_lck
 
         local exe1="/proc/$(cat $apf)/exe"
         local exe2="/proc/$(cat $spf)/exe"
@@ -860,6 +859,7 @@ wdog () {
 	fi
 
 	echo 0 > $stopf
+	echo 0 > $scanner_lck
 
 	iport=$(echo $ihost | cut -d: -f2)
 	ihost=$(echo $ihost | cut -d: -f1)
