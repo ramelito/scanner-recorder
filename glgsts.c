@@ -195,6 +195,7 @@ main (int argc, char** argv) {
 			dbuffer=strdup(buffer);
 			n=0;
 			sql=0;
+			token="init";
 			while (token != NULL && n < 13) {
 				token=strsep(&dbuffer, ",");
 				if (n==1 && token != '\0' ) freq=strdup(token);
