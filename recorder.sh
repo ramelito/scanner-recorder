@@ -131,8 +131,8 @@ chk_sw () {
 
 	local fail=0
 	local sw_list="ifconfig route ping ntpdate mktemp env cat wc od bc tr stty"
-	sw_list="$sw_list arecord lame darkice mp3splt stat glgsts sox head uniq curl"
-	sw_list="$sw_list insserv wget md5sum df find uname logger gcc"
+	sw_list="$sw_list arecord darkice stat glgsts sox head uniq curl shntool"
+	sw_list="$sw_list insserv wget md5sum df find uname logger gcc hexdump"
 
 	_notify "Check installed software."
 
@@ -328,7 +328,7 @@ wdog_starter () {
 					card USBSOUND$scard
 					device 0
 				}
-				rate 16000
+				rate 8000
 				channels 1
 			}
 		} " >> $asound_conf
@@ -401,7 +401,7 @@ gen_dc () {
 
     echo "[general]
 duration        = 0
-bufferSecs      = 2
+bufferSecs      = 20 
 reconnect       = yes
 
 [input]
@@ -425,93 +425,166 @@ split0 () {
 
 	_info "starting simple splitting func."
 
-	local soxopts="silence -l 1 0.1 1% -1 0.5 1%"
+	local opent
+	local tdir
 
-	local mp3spltopts="-s -p th=${th},min=${delay} -Q -N"
-	mp3spltopts="$mp3spltopts -d $split_dir -o $_template $rec_file"	
-	_info "mp3splt opts: $mp3spltopts"
-        mp3splt $mp3spltopts
-        list=$(mktemp)
+	local tmp_dir=$(mktemp -d)
+	_debug "$tmp_dir created."
 
-	_debug "preparing $list for list of files to process."
-        ls $split_dir | grep RAWSPLIT > $list
-        numlines=$(cat $list | wc -l)
-	_notify "$numlines found after split."
+        local dur=$(soxi -D $rec_file | cut -d. -f1)
+        local modt=$(stat -c %Y $rec_file)
+        let opent=modt-dur
+        rate=$(soxi -r ${rec_file})
+        bits=$(soxi -b ${rec_file})
+        let onesec=rate*bits/8
 
-        if [ "$numlines" == "0" ]; then
-		rm $list
-		return 0
-	fi
+	_info "starting sox to split file."
+	sox $rec_file $tmp_dir/${opent}_.wav silence 1 0.5 ${th}d 1 0.5 ${th}d : newfile : restart
 
-	_debug "reading list to rename."
-        while read line; do
-                local filename=${line%.*}
-                local datepart=$(echo $filename | cut -d"_" -f2)
-                local shiftpart=$(echo $filename | cut -d"_" -f3)
-                local shiftmins=${shiftpart:0:2}
-                local shiftsecs=${shiftpart:2:2}
-                local dpyy=${datepart:0:4}
-                local dpmm=${datepart:4:2}
-                local dpdd=${datepart:6:2}
-                local dphh=${datepart:8:2}
-                local dpmins=${datepart:10:2}
-                local dpsecs=${datepart:12:2}
-                local dpepoch=$(date -d "${dpyy}-${dpmm}-${dpdd} ${dphh}:${dpmins}:${dpsecs}" +%s)
-                [ ${shiftsecs:0:1} == 0 ] && shiftsecs=${shiftsecs:1:1}
-                [ ${shiftmins:0:1} == 0 ] && shiftmins=${shiftmins:1:1}
-                let shiftsecs=${shiftmins}*60+$shiftsecs
-                let dpepoch=$dpepoch+$shiftsecs
-                local newfile=${split_dir}/$(date -d "@$dpepoch" +%Y-%m-%d_%Hh%Mm%Ss)
-                if [ ! -f ${newfile}.mp3 ]; then
-                       	_info "soxing ${split_dir}/${line} to ${newfile}.wav" 
-			sox ${split_dir}/${line} ${newfile}.wav $soxopts
-			_info "laming ${newfile}.wav to ${newfile}.mp3 with bitrate=$brate."
-                        lame --quiet -b $brate ${newfile}.wav ${newfile}.mp3
-                        rm ${newfile}.wav
+        local num=$(ls $tmp_dir | grep ${opent} | wc -l)
+
+        if [ $num -gt 0 ]; then
+		
+		_info "$num files created."
+
+                hexdump -v -e '"%_ad "' -e '8192/1 "%01x" "\n"' $rec_file > ${rec_file}.hex
+
+        else
+		yymmdd=$(date -d@$modt "+%Y%m%d")
+		hh=$(date -d@$modt "+%H")
+		tdir=$scanner_audio/$yymmdd/SCANNER_${scard}/$hh
+		_notify "moving $rec_file to $tdir."
+        	case "$format" in
+                	"mp3")
+			local rec_file1=${rec_file%.*}
+			rec_file1=${rec_file1##*/}
+			sox $rec_file $tdir/$rec_file1.mp3
+			rm $rec_file
+                	;;
+	                *)
+			mv $rec_file $tdir
+	        	;;
+	        esac
+		
+		_debug "rmdir $tmp_dir."
+		rm -r $tmp_dir
+        fi
+
+	for outwav in $(find $tmp_dir -type f | grep ${opent}); do
+
+		local sample1=$(hexdump -v -s72 -n16 -e '16/1 "%01x" "\n"' $outwav)
+
+                if [ "X$sample1" == "X" ]; then
+	                rm $outwav
+                        continue
                 fi
-               	_debug "removing ${split_dir}/${line}." 
-		rm ${split_dir}/${line}
-        done < $list
-	_debug "removing $list."
-        rm $list
+
+		local bytes=$(grep $sample1 ${rec_file}.hex | awk '{print $1}' | head -1)
+		local st=$(echo "$bytes/$onesec" | bc)
+		let st=opent+st
+		local fname1=$(date -d@$st "+%Y-%m-%d_%Hh%Mm%Ss")
+		local yymmdd=$(date -d@$st "+%Y%m%d")
+		local hh=$(date -d@$st "+%H")
+		local split_dir=$scanner_audio/$yymmdd/SCANNER_${scard}/$hh
+		mkdir -p $split_dir
+		_notify "moving $outwav to $split_dir/$fname1."
+                case "$format" in
+                        "mp3")
+                       	sox $outwav $split_dir/${fname1}.mp3
+			rm $outwav
+                        ;;
+                        *)
+			mv $outwav $split_dir/${fname1}.wav
+                        ;;
+                esac
+
+	done
+
+	yymmdd=$(date -d@$modt "+%Y%m%d")
+	tdir=$scanner_audio/$yymmdd/REC
+	mkdir -p $tdir
+	_notify "moving $rec_file to $tdir."
+        case "$format" in
+                "mp3")
+		local rec_file1=${rec_file%.*}
+		rec_file1=${rec_file1##*/}
+		sox $rec_file $tdir/$rec_file1.mp3
+		rm $rec_file
+                ;;
+                *)
+		mv $rec_file $tdir
+	        ;;
+        esac
+
+	_debug "rmdir $tmp_dir."
+	rm -r $tmp_dir
 }
 
 split1 () {
 	
 	_info "starting Uniden splitting func."
 	
-	local logdir=$(dirname $log_file)
-	local comma=".*,$"
-	_mindur=$(echo "$mindur*1000" | bc | cut -d. -f1)
-	local fname=${log_file##*/}
-	local yymmdd=${fname:0:8}
-	local hh=${fname:8:2}
+	test -f $log_file || ( _error "$log_file does not exists"; exit 1 )
+	test -f $rec_file || ( _error "$rec_file does not exists"; exit 1 )
+	
 	local elogdir=/tmp/EXT_${port}
-	local mp3spltopts="-Q"
-	local numlines0=0
 	local n=0
 	local code=""
 	local uids=""
+        local modt=$(stat -c %Y $rec_file)
+        local dur=$(soxi -D $rec_file | cut -d. -f1)
+        local modt=$(stat -c %Y $rec_file)
+        let opent=modt-dur
+        local rate=$(soxi -r ${rec_file})
+        local bits=$(soxi -b ${rec_file})
+        let onesec=rate*bits/8
+	let fsize=dur*onesec
 
-	test -f $log_file || ( _error "$log_file does not exists"; exit 1 )
-	test -f $rec_file || ( _error "$rec_file does not exists"; exit 1 )
-
-        numlines=$(cat $log_file | wc -l)
-	_notify "$numlines found in $log_file."
-
-   	if [ $numlines -gt $numlines0 ]; then
-        	let cutlines=$numlines-$numlines0+3
-        	[ $cutlines -gt $numlines ] && cutlines=$numlines
-    	else
-       		cutlines=0
-    	fi
-
-    	numlines0=$numlines
 
 	ctf=$(mktemp)
 	_debug "creating temp file $ctf."
 
- 	head -n$numlines $log_file | tail -n${cutlines} > $ctf
+	while read line; do
+
+        	ref=$(echo $line | cut -d, -f14)
+	        st=$(echo $line | cut -d, -f15)
+        	en=$(echo $line | cut -d, -f16)
+
+	        [ "X$en" == "X" ] && en=$(echo "$ref+$dur" | bc)
+        	s1=$(echo "($st-$ref)*$onesec" | bc)
+	        s2=$(echo "($en-$ref)*$onesec" | bc)
+        	s1=$(echo $s1 | cut -d. -f1)
+	        s2=$(echo $s2 | cut -d. -f1)
+        	[ $s1 -eq $s2 ] && let s2++
+	        [ $s1 -gt $fsize ] && continue
+        	[ $s2 -gt $fsize ] && s2=$fsize
+	        echo $s1
+        	echo $s2
+
+	done < $log_file > $ctf
+
+	local tmp_dir=$(mktemp -d)
+
+	if [ $(cat $ctf | wc -l) -gt 0 ]; then
+		shntool split -O always -d $tmp_dir -f $ctf $rec_file
+	fi
+
+	local i=1
+	local j=1
+	for file in $(find $tmp_dir -type f | grep "split-"); do
+
+		_notify "entering $tmp_dir to delete some files."
+        	local _val=$(expr $i % 2)
+	        if [ $_val -eq 0 ]; then
+        	        mv $file $tmp_dir/$j.wav
+                	let j++
+	        else
+        	        rm $file
+	        fi
+        	let i++
+	done
+
+	j=1
 
 	while read line; do
 
@@ -520,88 +593,88 @@ split1 () {
 	        local group=$(echo $line | cut -d, -f 7 | sed -e 's/^_//g')
 	        local channel=$(echo $line | cut -d, -f 8 | sed -e 's/^_//g')
 	        local freq=$(echo $line | cut -d, -f 2 | sed -e 's/^0*//g')
-	        local r0=$(echo $line | cut -d, -f 14)
         	local s0=$(echo $line | cut -d, -f 15)
-	        local e0=$(echo $line | cut -d, -f 16)
 
-	        if [ "X$e0" != "X" ]; then
-			_debug "e0=$e0."
+		local fdp=$(date -d @$s0 +%Y-%m-%d_%Hh%Mm%Ss)
+		local yymmdd=$(date -d @$s0 +%Y%m%d)
+		local hh=$(date -d @$s0 +%H)
+		_debug "fdp is $fdp."
+            	if [[ "$freq" =~ \. ]]; then
+                   	filename="${fdp}_${freq}_MHz"
+			_debug "filename is $filename."
 
-	                local d0=$(echo "($e0-$s0)*1000" | bc)
-                	local d0=$(echo $d0 | cut -d. -f 1)
+                    	dir1="${scanner_audio}/${yymmdd}/${system}/${group}/${channel}/${hh}"
+                        [ "X$group" == "X" ] && dir1="${scanner_audio}/${yymmdd}/${system}/${freq}/${hh}"
+			_debug "dir1 is $dir1."
+                	test -d "$dir1" || mkdir -p "$dir1"
 
-                	if [ $d0 -le $_mindur ]; then
-				_debug "$d0 less than $_mindur."
-                    		[ -e "$elogdir/$s0" ] && rm "$elogdir/$s0"
-                    		continue
-                	fi
-			s=$(echo "scale=2; $s0-$r0$scorr" | bc)
-			e=$(echo "scale=2; $e0-$r0$ecorr" | bc)
-			ss=$(echo $s | cut -d. -f1)
-			sh=$(echo $s | cut -d. -f2)
-			es=$(echo $e | cut -d. -f1)
-			eh=$(echo $e | cut -d. -f2)
-			[ "X$ss" == "X" -o "${ss:0:1}" == 0 ] && ss=0
-			[ "X$es" == "X" -o "${es:0:1}" == 0 ] && es=0
-			[ "X$sm" == "X" -o "${sm:0:1}" == 0 ] && sm=0
-			[ "X$em" == "X" -o "${em:0:1}" == 0 ] && em=0
-                    	sm=$(expr $ss / 60)
-                	ss=$(expr $ss % 60)
-                	em=$(expr $es / 60)
-                    	es=$(expr $es % 60)
-			fdp=$(date -d @$s0 +%Y-%m-%d_%Hh%Mm%Ss)
-			_debug "fdp is $fdp."
-            		if [[ "$freq" =~ \. ]]; then
-                    		filename="${fdp}_${freq}_MHz"
-				_debug "filename is $filename."
-
-                    		dir1="${scanner_audio}/${yymmdd}/${system}/${group}/${channel}/${hh}"
-                        	[ "X$group" == "X" ] && dir1="${scanner_audio}/${yymmdd}/${system}/${freq}/${hh}"
-				_debug "dir1 is $dir1."
-                		test -d "$dir1" || mkdir -p "$dir1"
-
-                		[ -s "$elogdir/$s0" ] || sleep 3s
-                		if [ -s "$elogdir/$s0" ];then
-                    			cut -d, -f 9 "$elogdir/$s0" > "$elogdir/$s0".1
+                	[ -s "$elogdir/$s0" ] || sleep 3s
+                	if [ -s "$elogdir/$s0" ];then
+	                    	cut -d, -f 9 "$elogdir/$s0" > "$elogdir/$s0".1
    code=$(cat "$elogdir/$s0".1 | sort -u | grep "$freq" | tr ' ' '\n' | sed -e '/^$/d' | grep C | tr '\n' '_' | sed -e 's/_$//g')
-                    			_debug "extracting code $code. File $elogdir/$s0, size $(stat -c %s $elogdir/$s0)."
-                		fi
-				_debug "code is $code."
-                		[ -e "$elogdir/$s0".1 ] && rm "$elogdir/$s0".1
-                    		[ "X$code" != "X" ] && filename="${filename}_${code}"
-				_debug "filename is $filename."
-                		code=""
-            		else
-                    		filename="${fdp}_${freq}_${system}"
-				_debug "filename is $filename."
+        	            	_debug "extracting code $code. File $elogdir/$s0, size $(stat -c %s $elogdir/$s0)."
+                	fi
+			_debug "code is $code."
+                	[ -e "$elogdir/$s0".1 ] && rm "$elogdir/$s0".1
+                    	[ "X$code" != "X" ] && filename="${filename}_${code}"
+			_debug "filename is $filename."
+                	code=""
+            	else
+                  	filename="${fdp}_${freq}_${system}"
+			_debug "filename is $filename."
 
-                    		dir1="${scanner_audio}/${yymmdd}/${group}/${channel}/${hh}"
-                        	test "X$group" == "X" && dir1="${scanner_audio}/${yymmdd}/FOUNDTGIDS/${freq}/${hh}"
-				_debug "dir1 is $dir1."
-                		dir1=$(echo "$dir1" | sed -e 's/\://')
-                		test -d "$dir1" || mkdir -p "$dir1"
+                    	dir1="${scanner_audio}/${yymmdd}/${group}/${channel}/${hh}"
+                        test "X$group" == "X" && dir1="${scanner_audio}/${yymmdd}/FOUNDTGIDS/${freq}/${hh}"
+			_debug "dir1 is $dir1."
+                	dir1=$(echo "$dir1" | sed -e 's/\://')
+                	test -d "$dir1" || mkdir -p "$dir1"
 
-                		[ -s "$elogdir/$s0" ] || sleep 3s
-                		if [ -s "$elogdir/$s0" ]; then
-                    			cut -d, -f 7,9 "$elogdir/$s0" | grep UID > "$elogdir/$s0".1
+                	[ -s "$elogdir/$s0" ] || sleep 3s
+                	if [ -s "$elogdir/$s0" ]; then
+                    		cut -d, -f 7,9 "$elogdir/$s0" | grep UID > "$elogdir/$s0".1
 uids=$(cat "$elogdir/$s0".1 | clrsym.sed | tr ' ' '\n' | sed -e '/^$/d' | sed -e "/\b$freq\b/d" | uniq | tr '\n' '_' | sed -e 's/_$//g')
-                    			_debug "extracting uids $uids. File $elogdir/$s0, size $(stat -c %s $elogdir/$s0)."
-                		fi
-                		[ -e "$elogdir/$s0".1 ] && rm "$elogdir/$s0".1
-                		[ "X$uids" != "X" ] && filename="${filename}_${uids}"
-				_debug "filename is $filename."
-                		uids=""
-            		fi
-                    	mp3splt $mp3spltopts $rec_file $sm.$ss.$sh $em.$es.$eh -d "${dir1}" -o "${filename}"
-            		_info "cutting ${filename}"
-			_info "from $rec_file"
-			_info "to ${dir1},"
-			_info "start $sm.$ss.$sh, end $em.$es.$eh."
+                    		_debug "extracting uids $uids. File $elogdir/$s0, size $(stat -c %s $elogdir/$s0)."
+                	fi
+               		[ -e "$elogdir/$s0".1 ] && rm "$elogdir/$s0".1
+               		[ "X$uids" != "X" ] && filename="${filename}_${uids}"
+			_debug "filename is $filename."
+               		uids=""
+          	fi
+	        if [ -e $tmp_dir/$j.wav ]; then
+                	case "$format" in
+                        	"mp3")
+	                	_notify "soxing $tmp_dir/$j.wav to $dir1/${filename}.mp3"
+	                       	sox $tmp_dir/$j.wav $dir1/${filename}.mp3
+                	        ;;
+                        	*)
+	                	_notify "moving $tmp_dir/$j.wav to $dir1/${filename}.wav"
+	                       	mv $tmp_dir/$j.wav $dir1/${filename}.wav
+        	                ;;
+                	esac
         	fi
-    	done < $ctf
-	
-	_debug "removing $ctf."
-        rm $ctf
+        	let j++
+
+	done < $log_file
+
+	local yymmdd=$(date -d@$modt "+%Y%m%d")
+	local tdir=$scanner_audio/$yymmdd/REC
+	mkdir -p $tdir
+	_notify "moving $rec_file to $tdir."
+        case "$format" in
+            	"mp3")
+			local rec_file1=${rec_file%.*}
+			rec_file1=${rec_file1##*/}
+			sox $rec_file $tdir/$rec_file1.mp3
+			rm $rec_file
+	               	;;
+		*)
+			mv $rec_file $tdir
+	        	;;
+	esac
+	mkdir -p $scanner_audio/$yymmdd/LOG
+	mv $log_file $scanner_audio/$yymmdd/LOG/
+
+	rm -r $tmp_dir
 }
 
 split () {
@@ -609,6 +682,7 @@ split () {
 	_info "starting splitter."
 
 	th=$(echo $th | sed -e 's/m/-/g')
+
 	scor=$(echo $scor | sed -e 's/m/-/g')
 	scor=$(echo $scor | sed -e 's/p/\+/g')
 	ecor=$(echo $ecor | sed -e 's/m/-/g')
@@ -616,17 +690,10 @@ split () {
 	
 
 	while (true); do
-	
-		sleep $divm 
-		case "$type" in
-			0)
-			split0
-			;;
-			1)
-			split1
-			;;	
-		esac
 
+		local sleep1	
+		let sleep1=divm+20
+		sleep $sleep1
 
 		_info "starting for next cycle."
 	done
@@ -686,6 +753,9 @@ record () {
         local exe1="/proc/$(cat $apf)/exe"
         local exe2="/proc/$(cat $spf)/exe"
         local exe3="/proc/$(cat $lpf)/exe"
+	elogdir="/tmp/EXT_SCANNER${port}"
+
+	mkdir -p $elogdir
 
 	case "$type" in
 		0)
@@ -724,19 +794,12 @@ record () {
 
 	test $sw_killed -eq 0 && return 0
 
-	_info "check if $rec_dir, $log_dir and $elogdir exist, otherwise create them."
-
-	test -d "$rec_dir" || mkdir -p "$rec_dir"
-	test -d "$log_dir" || mkdir -p "$log_dir"
-	test -d "$elogdir" || mkdir -p "$elogdir"
-
 	_info "starting new arecord, split and logger instances."
 	_info "recording to $rec_file"
 
 	_info "starting arecord with opts: $aopts."
-	_info "starting lame with opts: $lopts."
 
-        arecord $aopts | lame $lopts "$rec_file" &
+        arecord $aopts "$rec_file" &
         sleep 2
 
        _notify "checking if arecord has started."
@@ -767,13 +830,9 @@ record () {
 
 		recorder.sh $opts & echo $! > $spf
 	else
-        	split_dir=$today_dir/SCANNER${port}/${hh}
-	        split_out=RAWSPLIT_${yy}${mm}${dd}${hh}${min}${sec}_@m@s
-		
-		_info "split env: $rec_file, $split_out, $split_dir."
+		_info "split env: $rec_file"
 	
-		opts="$opts --rec-file $rec_file --split-dir $split_dir"
-		opts="$opts --template $split_out"
+		opts="$opts --rec-file $rec_file"
 		
 		_info "starting split with $opts."
 	
@@ -843,9 +902,7 @@ livecast () {
 wdog () {
 
 	export TZ=$timez
-	_notify "starting watchdog."
-
-	local modf=0
+	_notify "starting watchdog. Switching to timezone $timez."
 
 	touch $apf
 	touch $spf
@@ -864,6 +921,8 @@ wdog () {
 	iport=$(echo $ihost | cut -d: -f2)
 	ihost=$(echo $ihost | cut -d: -f1)
 
+	local tmp_dir=$(mktemp -d)
+
 	while (true); do
 	        yy=$(date +%Y)
         	mm=$(date +%m)
@@ -871,12 +930,8 @@ wdog () {
         	hh=$(date +%H)
 	        min=$(date +%M)
         	sec=$(date +%S)
-	        modm=$(expr $min % $divm)
-		today_dir=$scanner_audio/${yy}${mm}${dd}
-        	rec_dir=$scanner_audio/${yy}${mm}${dd}/REC
-	        log_dir=$scanner_audio/${yy}${mm}${dd}/LOG
-        	rec_file=${rec_dir}/${yy}${mm}${dd}${hh}_SCANNER${port}_${min}.mp3
-	        log_file=${log_dir}/${yy}${mm}${dd}${hh}_SCANNER${port}_${min}.log
+        	rec_file=${tmp_dir}/${yy}${mm}${dd}${hh}_SCANNER${port}_${min}.wav
+	        log_file=${tmp_dir}/${yy}${mm}${dd}${hh}_SCANNER${port}_${min}.log
 
 		case "$rec" in
 			0) record
@@ -887,16 +942,7 @@ wdog () {
 			;;
 		esac
 
-#		if [ $modm -eq 0 -a $modf -eq 0 ]; then
-#			test -f "/proc/$(cat $apf)/exe" && kill -9 $(cat $apf)
-#                        test -f "/proc/$(cat $lpf)/exe" && kill $(cat $lpf)
-#                        test -f "/proc/$(cat $spf)/exe" && kill $(cat $spf)
-#            		modf=1
-#        	fi
-
 		sleep 5
-
-        	[ "$modm" != 0 ] && modf=0
 
 		if [ $(cat $stopf) == 1 ]; then
 			test -f "/proc/$(cat $apf)/exe" && kill -9 $(cat $apf)
