@@ -558,22 +558,28 @@ split1 () {
         	[ $s1 -eq $s2 ] && let s2++
 	        [ $s1 -gt $fsize ] && continue
         	[ $s2 -gt $fsize ] && s2=$fsize
-	        echo $s1
-        	echo $s2
+	        echo $s1 >> $ctf
+        	echo $s2 >> $ctf
 
-	done < $log_file > $ctf
+	done < $log_file
+	
 
 	local tmp_dir=$(mktemp -d)
 
 	if [ $(cat $ctf | wc -l) -gt 0 ]; then
+		_info "starting shntool to split."
 		shntool split -O always -d $tmp_dir -f $ctf $rec_file
 	fi
+	
+	rm $ctf
+	_debug "removing temp file $ctf."
 
 	local i=1
 	local j=1
+
 	for file in $(find $tmp_dir -type f | grep "split-"); do
 
-		_notify "entering $tmp_dir to delete some files."
+		_debug "make some cleaning in $tmp_dir."
         	local _val=$(expr $i % 2)
 	        if [ $_val -eq 0 ]; then
         	        mv $file $tmp_dir/$j.wav
