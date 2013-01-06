@@ -551,8 +551,8 @@ split1 () {
         	en=$(echo $line | cut -d, -f16)
 
 	        [ "X$en" == "X" ] && en=$(echo "$ref+$dur" | bc)
-        	s1=$(echo "($st-$ref)*$onesec" | bc)
-	        s2=$(echo "($en-$ref)*$onesec" | bc)
+        	s1=$(echo "($st-$ref$scor)*$onesec" | bc)
+	        s2=$(echo "($en-$ref$ecor)*$onesec" | bc)
         	s1=$(echo $s1 | cut -d. -f1)
 	        s2=$(echo $s2 | cut -d. -f1)
         	[ $s1 -eq $s2 ] && let s2++
@@ -577,7 +577,7 @@ split1 () {
 	local i=1
 	local j=1
 
-	for file in $(find $tmp_dir -type f | grep "split-"); do
+	for file in $(find $tmp_dir -type f | grep "split-" | sort); do
 
 		_debug "make some cleaning in $tmp_dir."
         	local _val=$(expr $i % 2)
