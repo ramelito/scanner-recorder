@@ -543,7 +543,7 @@ split1 () {
 
 	ctf=$(mktemp)
 	_debug "creating temp file $ctf."
-
+	_info "corrections will be applied - start $scor, end $ecor."
 	while read line; do
 
         	ref=$(echo $line | cut -d, -f14)
@@ -563,12 +563,13 @@ split1 () {
 
 	done < $log_file
 	
-
 	local tmp_dir=$(mktemp -d)
 
 	if [ $(cat $ctf | wc -l) -gt 0 ]; then
-		_info "starting shntool to split."
+		_notify "$(cat $log_file | wc -l ) entries found. Starting shntool."
 		shntool split -O always -d $tmp_dir -f $ctf $rec_file
+	else
+		_notify "$(cat $log_file | wc -l ) entries found..."
 	fi
 	
 	rm $ctf
@@ -577,9 +578,9 @@ split1 () {
 	local i=1
 	local j=1
 
+	_debug "make some cleaning in $tmp_dir."
 	for file in $(find $tmp_dir -type f | grep "split-" | sort); do
 
-		_debug "make some cleaning in $tmp_dir."
         	local _val=$(expr $i % 2)
 	        if [ $_val -eq 0 ]; then
         	        mv $file $tmp_dir/$j.wav
@@ -665,7 +666,7 @@ uids=$(cat "$elogdir/$s0".1 | clrsym.sed | tr ' ' '\n' | sed -e '/^$/d' | sed -e
 	local yymmdd=$(date -d@$modt "+%Y%m%d")
 	local tdir=$scanner_audio/$yymmdd/REC
 	mkdir -p $tdir
-	_notify "moving $rec_file to $tdir."
+	_info "moving $rec_file to $tdir."
         case "$format" in
             	"mp3")
 			local rec_file1=${rec_file%.*}
@@ -677,8 +678,10 @@ uids=$(cat "$elogdir/$s0".1 | clrsym.sed | tr ' ' '\n' | sed -e '/^$/d' | sed -e
 			mv $rec_file $tdir
 	        	;;
 	esac
-	mkdir -p $scanner_audio/$yymmdd/LOG
-	mv $log_file $scanner_audio/$yymmdd/LOG/
+	local log_dir=$scanner_audio/$yymmdd/LOG
+	mkdir -p $log_dir
+	_info "moving $log_file to $log_dir."
+	mv $log_file $log_dir
 
 	rm -r $tmp_dir
 }
@@ -765,7 +768,7 @@ record () {
 
 	case "$type" in
 		0)
-			_info "checking arecord or split are running."
+			_debug "checking arecord or split are running."
 
 			if [ ! -f "$exe1" -o ! -f "$exe2" ]; then
 
@@ -779,7 +782,7 @@ record () {
 			fi
 			;;	
 		1)
-			_info "checking arecord, split or logger are running."
+			_debug "checking arecord, split or logger are running."
 			
 			if [ ! -f "$exe1" -o ! -f "$exe2" -o ! -f "$exe3" ] ; then
 
@@ -801,14 +804,14 @@ record () {
 	test $sw_killed -eq 0 && return 0
 
 	_info "starting new arecord, split and logger instances."
-	_info "recording to $rec_file"
+	_notify "recording to $rec_file"
 
 	_info "starting arecord with opts: $aopts."
 
         arecord $aopts "$rec_file" &
         sleep 2
 
-       _notify "checking if arecord has started."
+       _debug "checking if arecord has started."
         if [ ! -f $apf -o ! -f "/proc/$(cat $apf)/exe" ]; then
 		_error "arecord is dead, killing darkice if exists."
 	        test -f "/proc/$(cat $dpf)/exe" && kill -9 $(cat $dpf)
@@ -826,8 +829,8 @@ record () {
 	if [ $type -gt 0 ]; then
 		local nanos=$(stat -c %z $apf | cut -d. -f2)
 		local reftime=$(stat -c %Z $apf)
-		gopts="$gopts -l $log_file -i $elogdir -r $reftime.${nanos:0:2}"
-		_debug "starting glgsts with gopts."
+		gopts="$gopts_gl -l $log_file -i $elogdir -r $reftime.${nanos:0:2}"
+		_info "starting glgsts with gopts: $gopts."
 		glgsts $gopts & echo $! > $lpf
 
 		opts="$opts --log-file $log_file --rec-file $rec_file"
@@ -1335,7 +1338,7 @@ scanner_lck="/tmp/scanner${port}.lck"
 aopts="-Dplug:dsnoop${scard} -f S16_LE -r $srate"
 aopts="$aopts -c 1 -q -t wav -d $divm --process-id-file $apf"
 lopts="-S -m m -q9 -b $brate -"
-gopts="-d /dev/scanners/${port} -t $delay -p $scanner_lck"
+gopts_gl="-d /dev/scanners/${port} -t $delay -p $scanner_lck"
 
 stopf="/tmp/stop${port}"
 darkice_conf="/tmp/darkice${port}.conf"
