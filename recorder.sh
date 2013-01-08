@@ -282,6 +282,11 @@ main_starter () {
         			recorder.sh $opts &
 			        sleep 1
 			done
+			if [ "$do_clean" == 1 ]; then
+
+				recorder.sh --clean --brate 1024 &
+
+			fi
 			;;
 		stop)
 			_notify "Stopping recorders."
@@ -293,11 +298,6 @@ main_starter () {
 		;;
 	esac
 
-	if [ "$do_clean" == 1 ]; then
-
-		recorder.sh --clean --brate 1024 &
-
-	fi
 }
 
 #Watchdog starter
@@ -1194,6 +1194,7 @@ clean () {
 
 	while (true); do
 	
+		sleep 300
 		cd $scanner_audio
 
 		kbytes=$(df . | tail -1 | awk -F" " '{print $4}')
@@ -1205,7 +1206,7 @@ clean () {
 			_notify "$bytes greater $onehourleft, exiting."
 			_debug "remove $clrlist."
 			rm $clrlist
-			exit 0
+			continue
 		fi
 
 		_info "building list of files ..."
@@ -1241,7 +1242,6 @@ clean () {
 	
 		kbytes=$(df . | tail -1 | awk -F" " '{print $4}')
 		_notify "$kbytes available after cleaning."
-		sleep 300
 	done
 }
 
