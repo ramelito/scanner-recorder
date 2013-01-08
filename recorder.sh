@@ -53,7 +53,6 @@ echo "Recorder usage help.
 			99 - debug
 	--install	install software on box
 	--with-udvrls	install udev rules
-	--with-crnjbs	install cron jobs
 	
 	--config	config file location
 	--start		starting recorders using record.conf file
@@ -1051,7 +1050,6 @@ install () {
 
 	_notify "installing software on the box."
 	_debug "_udvrls is $_udvrls." 
-	_debug "_crnjbs is $_crnjbs." 
 
 	_notify "creating directories."
 	mkdir -p $workbin
@@ -1088,10 +1086,6 @@ install () {
 	_info "compiling glgsts utility for arch $arch."
 	gcc glgsts.c -o /opt/bin/glgsts
 
-	if [ "$_crnjbs" == 1 ]; then
-		_info "installing crontab jobs..."
-		test -e cronjobs && crontab cronjobs
-	fi
 }
 
 extdrive () {
@@ -1292,7 +1286,7 @@ longopts="help,verbose:,extdrive,usbdev:,mntpnt:,mntopts:,mngaddr,intf:,clean"
 longopts="$longopts,modem-up,misp:,mport:"
 
 #install keys
-longopts="$longopts,install,with-udvrls,with-crnjbs"
+longopts="$longopts,install,with-udvrls"
 
 #starter keys
 longopts="$longopts,start,stop,restart,config:"
@@ -1324,7 +1318,6 @@ while true ; do
 		--stop) ms_action="stop"; shift ;;
 		--install) _install=1; shift ;;
 		--with-udvrls) _udvrls=1; shift ;;
-		--with-crnjbs) _crnjbs=1; shift ;;
 		--config) config=$2; shift 2;;
 		--wstart) wstart=1; shift;;
 		--type) type=$2; shift 2;;
