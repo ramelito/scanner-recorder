@@ -35,6 +35,7 @@ wstart=""
 _wdog=""
 _split=""
 _update=""
+do_clean="1"
 
 test -f $HOME/.recorderc && source $HOME/.recorderc
 
@@ -291,6 +292,12 @@ main_starter () {
 			done
 		;;
 	esac
+
+	if [ "$do_clean" == 1 ]; then
+
+		recorder.sh --clean --brate 1024 &
+
+	fi
 }
 
 #Watchdog starter
@@ -1186,61 +1193,61 @@ clean () {
 
 	echo $$ > $pid
 
-	let onehourleft=2*4*brate*3600*1000/8
+	let onehourleft=brate*3600*1000/8
 
 	_info "free at least $onehourleft bytes."
 
-	if [ -f $config ]; then
-		source $config
-	fi
+	while (true); do
+	
+		cd $scanner_audio
 
-	cd $scanner_audio
+		kbytes=$(df . | tail -1 | awk -F" " '{print $4}')
+		let bytes=kbytes*1024
 
-	kbytes=$(df . | tail -1 | awk -F" " '{print $4}')
-	let bytes=kbytes*1024
+		_info "there are $bytes free bytes."
 
-	_info "there are $bytes free bytes."
+		if [ $bytes -ge $onehourleft ]; then
+			_notify "$bytes greater $onehourleft, exiting."
+			_debug "remove $clrlist."
+			rm $clrlist
+			exit 0
+		fi
 
-	if [ $bytes -ge $onehourleft ]; then
-		_notify "$bytes greater $onehourleft, exiting."
+		_info "building list of files ..."
+
+		find . -printf "%A@ %p\n" | sort -n > $clrlist
+
+		_info "reading list until free needed space."
+
+		while [ $bytes -lt $onehourleft ]; do
+			file=$(cat $clrlist | head -1 | awk -F" " '{print $2}')
+			if [ ! -d $file ]; then
+		        	rm $file
+				_debug "removing file $file."
+				kbytes=$(df . | tail -1 | awk -F" " '{print $4}')
+				let bytes=kbytes*1024
+	  			_debug "$bytes bytes free."
+				xpath=${file%/*}
+				if [ "X$(ls -1A $xpath)" == "X" ]; then
+					_debug "$xpath directory is empty, let's delete it."
+					rmdir $xpath
+		    		fi
+    			else
+        			if [ "X$(ls -1A $file)" == "X" ]; then
+		        		_info "$file directory is empty, let's delete it."
+            				rmdir $file
+	    			fi
+	    		fi
+			tail -n+2 $clrlist > ${clrlist}.new
+			mv ${clrlist}.new $clrlist
+		done
 		_debug "remove $clrlist."
 		rm $clrlist
-		exit 0
-	fi
-
-	_info "building list of files ..."
-
-	find . -printf "%A@ %p\n" | sort -n > $clrlist
-
-	_info "reading list until free needed space."
-
-	while [ $bytes -lt $onehourleft ]; do
-		file=$(cat $clrlist | head -1 | awk -F" " '{print $2}')
-		if [ ! -d $file ]; then
-		        rm $file
-			_debug "removing file $file."
-			kbytes=$(df . | tail -1 | awk -F" " '{print $4}')
-			let bytes=kbytes*1024
-	  		_debug "$bytes bytes free."
-			xpath=${file%/*}
-			if [ "X$(ls -1A $xpath)" == "X" ]; then
-				_debug "$xpath directory is empty, let's delete it."
-				rmdir $xpath
-	    		fi
-    		else
-        		if [ "X$(ls -1A $file)" == "X" ]; then
-		        	_info "$file directory is empty, let's delete it."
-            			rmdir $file
-	    		fi
-    		fi
-		tail -n+2 $clrlist > ${clrlist}.new
-		mv ${clrlist}.new $clrlist
-	done
-	_debug "remove $clrlist."
-	rm $clrlist
 	
-	kbytes=$(df . | tail -1 | awk -F" " '{print $4}')
-	_notify "$kbytes available after cleaning."
+		kbytes=$(df . | tail -1 | awk -F" " '{print $4}')
+		_notify "$kbytes available after cleaning."
+		sleep 300
+	done
 }
 
 modem_up () {
