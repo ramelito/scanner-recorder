@@ -524,35 +524,66 @@ split1 () {
 	
 	_info "starting Uniden splitting func."
 	
-	test -f $log_file || ( _error "$log_file does not exists"; exit 1 )
-	test -f $rec_file || ( _error "$rec_file does not exists"; exit 1 )
+	test -f $rec_file || _error "$rec_file does not exists"
+	test -f $rec_file || exit 1
+	test -f $log_file || _error "$log_file does not exists"
+	test -f $log_file || exit 1 
+        
+	local modt=$(stat -c %Y $rec_file)
 	
+	if [ $(cat $log_file | wc -l) -eq 0 ]; then
+		_notify "log file contains 0 entries."
+		local yymmdd=$(date -d@$modt "+%Y%m%d")
+		local tdir=$scanner_audio/$yymmdd/REC
+		mkdir -p $tdir
+		_info "moving $rec_file to $tdir."
+        	case "$format" in
+            		"mp3")
+				local rec_file1=${rec_file%.*}
+				rec_file1=${rec_file1##*/}
+				sox $rec_file $tdir/$rec_file1.mp3
+				rm $rec_file
+	               		;;
+			*)
+				mv $rec_file $tdir
+	        		;;
+		esac
+		local log_dir=$scanner_audio/$yymmdd/LOG
+		mkdir -p $log_dir
+		_info "moving $log_file to $log_dir."
+		mv $log_file $log_dir
+		return 0
+	fi
+
 	local elogdir=/tmp/EXT_${port}
 	local n=0
 	local code=""
 	local uids=""
         local modt=$(stat -c %Y $rec_file)
         local dur=$(soxi -D $rec_file | cut -d. -f1)
-        local modt=$(stat -c %Y $rec_file)
         let opent=modt-dur
         local rate=$(soxi -r ${rec_file})
         local bits=$(soxi -b ${rec_file})
         let onesec=rate*bits/8
 	let fsize=dur*onesec
 
+	local ctf=$(mktemp)
 
-	ctf=$(mktemp)
 	_debug "creating temp file $ctf."
 	_info "corrections will be applied - start $scor, end $ecor."
+	
+	_debug "onesec=$onesec, dur=$dur, fsize=$fsize."
 	while read line; do
 
         	ref=$(echo $line | cut -d, -f14)
 	        st=$(echo $line | cut -d, -f15)
         	en=$(echo $line | cut -d, -f16)
 
+		_debug "ref=$ref, st=$st, en=$en."
+
 	        [ "X$en" == "X" ] && en=$(echo "$ref+$dur" | bc)
-        	s1=$(echo "($st-$ref$scor)*$onesec" | bc)
-	        s2=$(echo "($en-$ref$ecor)*$onesec" | bc)
+        	s1=$(echo "($st-$ref)*$onesec" | bc)
+	        s2=$(echo "($en-$ref)*$onesec" | bc)
         	s1=$(echo $s1 | cut -d. -f1)
 	        s2=$(echo $s2 | cut -d. -f1)
         	[ $s1 -eq $s2 ] && let s2++
@@ -560,16 +591,18 @@ split1 () {
         	[ $s2 -gt $fsize ] && s2=$fsize
 	        echo $s1 >> $ctf
         	echo $s2 >> $ctf
+		_debug "s1=$s1"
+		_debug "s2=$s2"
 
 	done < $log_file
 	
-	local tmp_dir=$(mktemp -d)
+	local tmp_dir=$(mktemp -d --tmpdir=/scanner_audio)
+
+	_debug "$tmp_dir for splitting created."
 
 	if [ $(cat $ctf | wc -l) -gt 0 ]; then
 		_notify "$(cat $log_file | wc -l ) entries found. Starting shntool."
 		shntool split -O always -d $tmp_dir -f $ctf $rec_file
-	else
-		_notify "$(cat $log_file | wc -l ) entries found..."
 	fi
 	
 	rm $ctf
@@ -583,9 +616,11 @@ split1 () {
 
         	local _val=$(expr $i % 2)
 	        if [ $_val -eq 0 ]; then
+			_notify "moving $file to $tmp_dir/$j.wav"
         	        mv $file $tmp_dir/$j.wav
                 	let j++
 	        else
+			_debug "removing $file."
         	        rm $file
 	        fi
         	let i++
@@ -658,10 +693,15 @@ uids=$(cat "$elogdir/$s0".1 | clrsym.sed | tr ' ' '\n' | sed -e '/^$/d' | sed -e
 	                       	mv $tmp_dir/$j.wav $dir1/${filename}.wav
         	                ;;
                 	esac
-        	fi
+        	else
+			_error "$tmp_dir/$j.wav not exists."
+		fi
         	let j++
 
 	done < $log_file
+	
+	_debug "deleting $tmp_dir."
+	rm -r $tmp_dir
 
 	local yymmdd=$(date -d@$modt "+%Y%m%d")
 	local tdir=$scanner_audio/$yymmdd/REC
@@ -683,7 +723,6 @@ uids=$(cat "$elogdir/$s0".1 | clrsym.sed | tr ' ' '\n' | sed -e '/^$/d' | sed -e
 	_info "moving $log_file to $log_dir."
 	mv $log_file $log_dir
 
-	rm -r $tmp_dir
 }
 
 split () {
@@ -697,11 +736,10 @@ split () {
 	ecor=$(echo $ecor | sed -e 's/m/-/g')
 	ecor=$(echo $ecor | sed -e 's/p/\+/g')
 	
-
 	while (true); do
 
 		local sleep1	
-		let sleep1=divm+20
+		let sleep1=divm+5
 		sleep $sleep1
 
 		_info "starting for next cycle."
@@ -764,17 +802,11 @@ record () {
         local exe3="/proc/$(cat $lpf)/exe"
 	elogdir="/tmp/EXT_SCANNER${port}"
 
-	mkdir -p $elogdir
-
 	case "$type" in
 		0)
-			_debug "checking arecord or split are running."
+			if [ ! -f "$exe1" ]; then
 
-			if [ ! -f "$exe1" -o ! -f "$exe2" ]; then
-
-				_info "arecord kill -9 on pid $(cat $apf)"
-                		test -f "/proc/$(cat $apf)/exe" && kill -9 $(cat $apf)
-
+				_info "arecord with pid $(cat $apf) is dead."
 				_info "split kill on pid $(cat $spf)"
                 		test -f "/proc/$(cat $spf)/exe" && kill $(cat $spf)
 
@@ -782,49 +814,60 @@ record () {
 			fi
 			;;	
 		1)
-			_debug "checking arecord, split or logger are running."
-			
-			if [ ! -f "$exe1" -o ! -f "$exe2" -o ! -f "$exe3" ] ; then
+			if [ ! -f "$exe1" ]; then
 
-				_info "arecord kill -9 on pid $(cat $apf)"
-                		test -f "/proc/$(cat $apf)/exe" && kill -9 $(cat $apf)
-
-				_info "split kill on pid $(cat $spf)"
-                		test -f "/proc/$(cat $spf)/exe" && kill $(cat $spf)
-
-				_info "logger kill -9 on pid $(cat $lpf)"
-                		test -f "/proc/$(cat $lpf)/exe" && kill -9 $(cat $lpf)
-				test -d "$elogdir" && rm -rf "$elogdir"
-
+				_info "arecord with pid $(cat $apf) is dead."
 				sw_killed=1
+			fi
+
+			if [ ! -f "$exe2" ]; then
+				
+				_info "splitter with pid $(cat $spf) is dead."
+				sw_killed=1
+			fi
+
+			if [ ! -f "$exe3" ]; then
+
+				_info "logger with pid $(cat $lpf) is dead."
+				sw_killed=1
+			fi
+
+			if [ $sw_killed -eq 1 ]; then
+
+				_info "arecord kill on pid $(cat $apf)"
+				_info "split kill on pid $(cat $spf)"
+				_info "logger kill on pid $(cat $lpf)"
+                		
+				test -f "/proc/$(cat $apf)/exe" && kill -9 $(cat $apf)
+				test -f "/proc/$(cat $spf)/exe" && kill $(cat $spf)
+                		test -f "/proc/$(cat $lpf)/exe" && kill -9 $(cat $lpf)
+				rm -r $elogdir
 			fi
 			;;	
 	esac
 
 	test $sw_killed -eq 0 && return 0
 
-	_info "starting new arecord, split and logger instances."
-	_notify "recording to $rec_file"
-
 	_info "starting arecord with opts: $aopts."
 
         arecord $aopts "$rec_file" &
-        sleep 2
+        sleep 2 
 
-       _debug "checking if arecord has started."
+	_debug "checking if arecord has started."
         if [ ! -f $apf -o ! -f "/proc/$(cat $apf)/exe" ]; then
 		_error "arecord is dead, killing darkice if exists."
 	        test -f "/proc/$(cat $dpf)/exe" && kill -9 $(cat $dpf)
 	        return 1
-       fi
+	fi
 
-       opts="--split --type $type --port $port --scard $scard"
-       opts="$opts --rec $rec --ihost $ihost --ipass $ipass"
-       opts="$opts --imount $imount --profile $profile"
-       opts="$opts --icao $icao --scor $scor --ecor $ecor"
-       opts="$opts --delay $delay --mindur $mindur --timez $timez"
-       opts="$opts --th $th --vol $vol --srate $srate --brate $brate"
-       opts="$opts --divm $divm --verbose $verbose"
+	mkdir -p $elogdir
+	opts="--split --type $type --port $port --scard $scard"
+	opts="$opts --rec $rec --ihost $ihost --ipass $ipass"
+	opts="$opts --imount $imount --profile $profile"
+	opts="$opts --icao $icao --scor $scor --ecor $ecor"
+	opts="$opts --delay $delay --mindur $mindur --timez $timez"
+	opts="$opts --th $th --vol $vol --srate $srate --brate $brate"
+	opts="$opts --divm $divm --verbose $verbose"
 
 	if [ $type -gt 0 ]; then
 		local nanos=$(stat -c %z $apf | cut -d. -f2)
@@ -849,6 +892,8 @@ record () {
 	fi
 
 	_info "arecord started with pid $(cat $apf)."
+	_notify "recording to $rec_file"
+	_notify "logging to $log_file"
 }
 
 livecast () {
@@ -939,8 +984,8 @@ wdog () {
         	hh=$(date +%H)
 	        min=$(date +%M)
         	sec=$(date +%S)
-        	rec_file=${tmp_dir}/${yy}${mm}${dd}${hh}_SCANNER${port}_${min}.wav
-	        log_file=${tmp_dir}/${yy}${mm}${dd}${hh}_SCANNER${port}_${min}.log
+        	rec_file=${tmp_dir}/${yy}${mm}${dd}${hh}${min}${sec}_SCANNER${port}.wav
+	        log_file=${tmp_dir}/${yy}${mm}${dd}${hh}${min}${sec}_SCANNER${port}.log
 
 		case "$rec" in
 			0) record
