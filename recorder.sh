@@ -289,6 +289,7 @@ main_starter () {
 			for stops in $(ls /tmp/stop*); do
 				_notify "stopping recorder ($stops)."
 				echo 1 > $stops
+				test -f /tmp/clean.pid && kill $(cat /tmp/clean.pid)
 			done
 		;;
 	esac
