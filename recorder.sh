@@ -35,7 +35,7 @@ wstart=""
 _wdog=""
 _split=""
 _update=""
-do_clean="1"
+do_clean="0"
 format="wav"
 
 test -f $HOME/.recorderc && source $HOME/.recorderc
@@ -434,7 +434,7 @@ split0 () {
 	_info "starting simple splitting func."
 
 	local opent
-	local tdir
+	local rec_dir
 
 	local tmp_dir=$(mktemp -d)
 	_debug "$tmp_dir created."
@@ -446,8 +446,25 @@ split0 () {
         bits=$(soxi -b ${rec_file})
         let onesec=rate*bits/8
 
+	yymmdd=$(date -d@$opent "+%Y%m%d")
+	hh=$(date -d@$opent "+%H")
+	rec_dir=$scanner_audio/$yymmdd/SCANNER_${scard}/$hh
+	local rec_file1=${rec_file%.*}
+	rec_file1=${rec_file1##*/}
+
+	mkdir -p $rec_dir
+
+	_notify "moving $rec_file to $rec_dir."
+	rsync -t $rec_file $rec_dir
+	rm $rec_file
+
 	_info "starting sox to split file."
-	sox $rec_file $tmp_dir/${opent}_.wav silence 1 0.5 ${th}d 1 0.5 ${th}d : newfile : restart
+	sox $rec_dir/$rec_file1.wav $tmp_dir/${opent}_.wav silence 1 0.5 ${th}d 1 0.5 ${th}d : newfile : restart
+
+	if [ "$format" != "wav" ]; then
+		sox $rec_dir/$rec_file1.wav $rec_dir/$rec_file1.$format
+		test -f $rec_dir/$rec_file1.$format && rm $rec_dir/$rec_file1.wav
+	fi
 
         local num=$(ls $tmp_dir | grep ${opent} | wc -l)
 
@@ -456,26 +473,6 @@ split0 () {
 		_info "$num files created."
 
                 hexdump -v -e '"%_ad "' -e '8192/1 "%01x" "\n"' $rec_file > ${rec_file}.hex
-
-        else
-		yymmdd=$(date -d@$modt "+%Y%m%d")
-		hh=$(date -d@$modt "+%H")
-		tdir=$scanner_audio/$yymmdd/SCANNER_${scard}/$hh
-		_notify "moving $rec_file to $tdir."
-        	case "$format" in
-                	"mp3")
-			local rec_file1=${rec_file%.*}
-			rec_file1=${rec_file1##*/}
-			sox $rec_file $tdir/$rec_file1.mp3
-			rm $rec_file
-                	;;
-	                *)
-			mv $rec_file $tdir
-	        	;;
-	        esac
-		
-		_debug "rmdir $tmp_dir."
-		rm -r $tmp_dir
         fi
 
 	for outwav in $(find $tmp_dir -type f | grep ${opent}); do
@@ -496,34 +493,15 @@ split0 () {
 		local split_dir=$scanner_audio/$yymmdd/SCANNER_${scard}/$hh
 		mkdir -p $split_dir
 		_notify "moving $outwav to $split_dir/$fname1."
-                case "$format" in
-                        "mp3")
-                       	sox $outwav $split_dir/${fname1}.mp3
+		if [ "$format" == "wav" ]; then
+			mv $outwav $split_dir/$fname1.wav
+		else
+                       	sox $outwav $split_dir/$fname1.$format
 			rm $outwav
-                        ;;
-                        *)
-			mv $outwav $split_dir/${fname1}.wav
-                        ;;
-                esac
-
+		fi	
 	done
 
-	yymmdd=$(date -d@$modt "+%Y%m%d")
-	tdir=$scanner_audio/$yymmdd/REC
-	mkdir -p $tdir
-	_notify "moving $rec_file to $tdir."
-        case "$format" in
-                "mp3")
-		local rec_file1=${rec_file%.*}
-		rec_file1=${rec_file1##*/}
-		sox $rec_file $tdir/$rec_file1.mp3
-		rm $rec_file
-                ;;
-                *)
-		mv $rec_file $tdir
-	        ;;
-        esac
-
+	test -f ${rec_file}.hex && rm ${rec_file}.hex
 	_debug "rmdir $tmp_dir."
 	rm -r $tmp_dir
 }
@@ -552,34 +530,22 @@ split1 () {
 
 	_debug "onesec=$onesec, dur=$dur."
 	
-	local yymmdd=$(date -d@$modt "+%Y%m%d")
-	local tdir=$scanner_audio/$yymmdd/REC
+	local yymmdd=$(date -d@$opent "+%Y%m%d")
+	local rec_dir=$scanner_audio/$yymmdd/REC
 	local log_dir=$scanner_audio/$yymmdd/LOG
 	local rec_file1=${rec_file##*/}
 	local log_file1=${log_file##*/}
 
-	mkdir -p $tdir
+	mkdir -p $rec_dir
 	mkdir -p $log_dir
 
-	_info "moving $rec_file to $tdir."
-        case "$format" in
-            	"mp3")
-			sox $rec_file $tdir/$rec_file1.mp3
-			rm $rec_file
-	               	;;
-		*)
-			mv $rec_file $tdir
-	        	;;
-	esac
+	_info "moving $rec_file to $rec_dir."
+	rsync -t $rec_file $rec_dir
+	rm $rec_file
 
 	_info "moving $log_file to $log_dir."
-	mv $log_file $log_dir
-
-	local wh=$(mktemp)
-	
-	_debug "extracting wav header to $wh from $tdir/$rec_file1"
-
-	dd if=$tdir/$rec_file1 of=$wh bs=1 count=72
+	rsync -t $log_file $log_dir
+	rm $log_file
 
 	_debug "loading $log_dir/$log_file1"
 
@@ -651,20 +617,19 @@ uids=$(cat "$elogdir/$st".1 | clrsym.sed | tr ' ' '\n' | sed -e '/^$/d' | sed -e
                		uids=""
           	fi
 
-	        _notify "extracting from $tdir/$rec_file1 to $dir1/${filename}.pcm"
-		dd if=$tdir/$rec_file1 of=$dir1/${filename}.pcm skip=$s1 bs=$bs count=$s2
-		cat $wh $dir1/${filename}.pcm > $dir1/${filename}.wav
-		rm $dir1/${filename}.pcm
-		if [ "$format" != "wav" ]; then
-			
-			_notify "encoding to $dir1/${filename}.wav to $dir1/${filename}.$format"
-			sox $dir1/${filename}.wav $dir1/${filename}.$format
-			rm $dir1/${filename}.wav
-		fi
+	        _notify "extracting from $rec_dir/$rec_file1 to $dir1/${filename}.raw"
+		dd if=$rec_dir/$rec_file1 of=$dir1/${filename}.raw skip=$s1 bs=$bs count=$s2
+		_notify "encoding to $dir1/${filename}.raw to $dir1/${filename}.$format"
+		sox -c1 -2 -s -r $srate $dir1/${filename}.raw $dir1/${filename}.$format			
+		rm $dir1/${filename}.raw
 
 	done < $log_dir/$log_file1
 
-	rm $wh
+	if [ "$format" != "wav" ]; then
+		local rec_file2=${rec_file1%.*}
+		sox $rec_dir/$rec_file1 $rec_dir/$rec_file2.$format
+		test -f $rec_dir/$rec_file2.$format && rm $rec_dir/$rec_file1
+	fi
 }
 
 split () {
@@ -702,16 +667,10 @@ update () {
 	        
 		yyyymmdd=$(date +%Y%m%d)
 
-		logdir=${scanner_audio}/$yyyymmdd/LOG		
-
-        	test -d "$logdir" || continue
-
-	        slog="$(ls -tr $logdir | grep SCANNER${port} | tail -1)"
+	        slog="$(find /tmp -name *${port}.log -mmin -1)"
 
         	[ "X$slog" == "X" ] && continue
 		
-		slog=$logdir/$slog
-
 	        if [ ! -e $slog ]; then
         	        curline=""
 	        else
@@ -781,8 +740,7 @@ record () {
 				_info "logger kill on pid $(cat $lpf)"
                 		
 				test -f "/proc/$(cat $apf)/exe" && kill -9 $(cat $apf)
-				test -f "/proc/$(cat $spf)/exe" && kill $(cat $spf)
-                		test -f "/proc/$(cat $lpf)/exe" && kill -9 $(cat $lpf)
+                		test -f "/proc/$(cat $lpf)/exe" && kill $(cat $lpf)
 				rm -r $elogdir
 			fi
 			;;	
