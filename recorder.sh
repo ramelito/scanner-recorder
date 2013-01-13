@@ -431,7 +431,7 @@ password        = $ipass
 
 split0 () {
 
-	_info "starting simple splitting func."
+	_info "split-$(cat $spf) simple."
 
 	local opent
 	local rec_dir
@@ -508,7 +508,7 @@ split0 () {
 
 split1 () {
 	
-	_info "starting Uniden splitting func."
+	_info "split-$(cat $spf) Uniden."
 	
 	test -f $rec_file || _error "$rec_file does not exists"
 	test -f $rec_file || exit 1
@@ -528,8 +528,8 @@ split1 () {
         local bits=$(soxi -b ${rec_file})
         let bs=rate*bits/800
 
-	_debug "onesec=$onesec, dur=$dur."
-	
+	_debug "bs=$bs"
+
 	local yymmdd=$(date -d@$opent "+%Y%m%d")
 	local rec_dir=$scanner_audio/$yymmdd/REC
 	local log_dir=$scanner_audio/$yymmdd/LOG
@@ -620,7 +620,7 @@ uids=$(cat "$elogdir/$st".1 | clrsym.sed | tr ' ' '\n' | sed -e '/^$/d' | sed -e
 	        _notify "extracting from $rec_dir/$rec_file1 to $dir1/${filename}.raw"
 		dd if=$rec_dir/$rec_file1 of=$dir1/${filename}.raw skip=$s1 bs=$bs count=$s2
 		_notify "encoding to $dir1/${filename}.raw to $dir1/${filename}.$format"
-		sox -c1 -2 -s -r $srate $dir1/${filename}.raw $dir1/${filename}.$format			
+		sox -c1 -b 16 -e signed-integer -r $srate $dir1/${filename}.raw $dir1/${filename}.$format			
 		rm $dir1/${filename}.raw
 
 	done < $log_dir/$log_file1
@@ -649,7 +649,7 @@ split () {
 		let sleep1=divm+5
 		sleep $sleep1
 
-		_info "starting for next cycle."
+		_info "split-$(cat $spf) next cycle."
 	done
 
 }
@@ -740,7 +740,8 @@ record () {
 				_info "logger kill on pid $(cat $lpf)"
                 		
 				test -f "/proc/$(cat $apf)/exe" && kill -9 $(cat $apf)
-                		test -f "/proc/$(cat $lpf)/exe" && kill $(cat $lpf)
+                		test -f "/proc/$(cat $lpf)/exe" && kill -15 $(cat $lpf)
+                		test -f "/proc/$(cat $spf)/exe" && kill -15 $(cat $spf)
 				rm -r $elogdir
 			fi
 			;;	
