@@ -448,7 +448,7 @@ split0 () {
 
 	yymmdd=$(date -d@$opent "+%Y%m%d")
 	hh=$(date -d@$opent "+%H")
-	rec_dir=$scanner_audio/$yymmdd/SCANNER_${scard}/$hh
+	rec_dir=$scanner_audio/$yymmdd/REC
 	local rec_file1=${rec_file%.*}
 	rec_file1=${rec_file1##*/}
 
@@ -472,7 +472,7 @@ split0 () {
 		
 		_info "$num files created."
 
-                hexdump -v -e '"%_ad "' -e '8192/1 "%01x" "\n"' $rec_file > ${rec_file}.hex
+                hexdump -v -e '"%_ad "' -e '8192/1 "%01x" "\n"' $rec_dir/$rec_file1.wav > $tmp_dir/$rec_file1.hex
         fi
 
 	for outwav in $(find $tmp_dir -type f | grep ${opent}); do
@@ -484,7 +484,7 @@ split0 () {
                         continue
                 fi
 
-		local bytes=$(grep $sample1 ${rec_file}.hex | awk '{print $1}' | head -1)
+		local bytes=$(grep $sample1 $tmp_dir/$rec_file1.hex | awk '{print $1}' | head -1)
 		local st=$(echo "$bytes/$onesec" | bc)
 		let st=opent+st
 		local fname1=$(date -d@$st "+%Y-%m-%d_%Hh%Mm%Ss")
@@ -501,7 +501,6 @@ split0 () {
 		fi	
 	done
 
-	test -f ${rec_file}.hex && rm ${rec_file}.hex
 	_debug "rmdir $tmp_dir."
 	rm -r $tmp_dir
 }
