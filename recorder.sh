@@ -35,7 +35,7 @@ wstart=""
 _wdog=""
 _split=""
 _update=""
-do_clean="0"
+do_clean="1"
 format="wav"
 
 test -f $HOME/.recorderc && source $HOME/.recorderc
@@ -431,12 +431,10 @@ password        = $ipass
 
 split0 () {
 
-	_info "split-$(cat $spf) simple."
-
 	local opent
 	local rec_dir
 
-	local tmp_dir=$(mktemp -d)
+	local tmp_dir=$(mktemp --tmpdir=$scanner_audio -d)
 	_debug "$tmp_dir created."
 
         local dur=$(soxi -D $rec_file | cut -d. -f1)
@@ -459,6 +457,7 @@ split0 () {
 	rm $rec_file
 
 	_info "starting sox to split file."
+	_debug "sox $rec_dir/$rec_file1.wav $tmp_dir/${opent}_.wav silence 1 0.5 ${th}d 1 0.5 ${th}d ..."
 	sox $rec_dir/$rec_file1.wav $tmp_dir/${opent}_.wav silence 1 0.5 ${th}d 1 0.5 ${th}d : newfile : restart
 
 	if [ "$format" != "wav" ]; then
@@ -468,11 +467,13 @@ split0 () {
 
         local num=$(ls $tmp_dir | grep ${opent} | wc -l)
 
+	_debug "num=$num"
+
         if [ $num -gt 0 ]; then
 		
 		_info "$num files created."
 
-                hexdump -v -e '"%_ad "' -e '8192/1 "%01x" "\n"' $rec_dir/$rec_file1.wav > $tmp_dir/$rec_file1.hex
+                hexdump -v -e '"%_ad "' -e '8192/1 "%01x" "\n"' $rec_dir/$rec_file1.wav > $tmp_dir/${rec_file1}.hex
         fi
 
 	for outwav in $(find $tmp_dir -type f | grep ${opent}); do
@@ -484,7 +485,7 @@ split0 () {
                         continue
                 fi
 
-		local bytes=$(grep $sample1 $tmp_dir/$rec_file1.hex | awk '{print $1}' | head -1)
+		local bytes=$(grep $sample1 $tmp_dir/${rec_file1}.hex | awk '{print $1}' | head -1)
 		local st=$(echo "$bytes/$onesec" | bc)
 		let st=opent+st
 		local fname1=$(date -d@$st "+%Y-%m-%d_%Hh%Mm%Ss")
@@ -506,8 +507,6 @@ split0 () {
 }
 
 split1 () {
-	
-	_info "split-$(cat $spf) Uniden."
 	
 	test -f $rec_file || _error "$rec_file does not exists"
 	test -f $rec_file || exit 1
@@ -642,14 +641,18 @@ split () {
 	ecor=$(echo $ecor | sed -e 's/m/-/g')
 	ecor=$(echo $ecor | sed -e 's/p/\+/g')
 	
-	while (true); do
-
-		local sleep1	
-		let sleep1=divm+5
-		sleep $sleep1
-
-		_info "split-$(cat $spf) next cycle."
-	done
+	local sleep1	
+	let sleep1=divm+5
+	sleep $sleep1
+		
+	case "$type" in
+		0)
+			split0
+			;;
+		1)
+			split1
+			;;	
+	esac
 
 }
 
@@ -707,8 +710,6 @@ record () {
 			if [ ! -f "$exe1" ]; then
 
 				_info "arecord with pid $(cat $apf) is dead."
-				_info "split kill on pid $(cat $spf)"
-                		test -f "/proc/$(cat $spf)/exe" && kill $(cat $spf)
 
 				sw_killed=1
 			fi
@@ -735,12 +736,10 @@ record () {
 			if [ $sw_killed -eq 1 ]; then
 
 				_info "arecord kill on pid $(cat $apf)"
-				_info "split kill on pid $(cat $spf)"
 				_info "logger kill on pid $(cat $lpf)"
                 		
 				test -f "/proc/$(cat $apf)/exe" && kill -9 $(cat $apf)
-                		test -f "/proc/$(cat $lpf)/exe" && kill -15 $(cat $lpf)
-                		test -f "/proc/$(cat $spf)/exe" && kill -15 $(cat $spf)
+                		test -f "/proc/$(cat $lpf)/exe" && kill $(cat $lpf)
 				rm -r $elogdir
 			fi
 			;;	
@@ -903,7 +902,6 @@ wdog () {
             		test -f "/proc/$(cat $dpf)/exe" && kill -9 $(cat $dpf)
                         test -f "/proc/$(cat $lpf)/exe" && kill $(cat $lpf)
                         test -f "/proc/$(cat $upf)/exe" && kill $(cat $upf)
-                        test -f "/proc/$(cat $spf)/exe" && kill $(cat $spf)
                         rm $stopf
             		exit 1
         	fi
@@ -912,7 +910,7 @@ wdog () {
 
 ctrl_c () {
 
-	if [ "$_split" == 1 ]; then
+	if [ "$_split" == 2 ]; then
 		
 		_debug "SIGTERM caught, making last split."
 
