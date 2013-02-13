@@ -64,6 +64,7 @@ echo "Recorder usage help.
 	--type		scanner type
 			0 - uncontrolled
 			1 - uniden
+			2 - aor ar8200 mk3
 	--port		scanner serial port
 	--scard		soundcard usb port
 	--rec		record mode
@@ -132,7 +133,7 @@ chk_sw () {
 
 	local fail=0
 	local sw_list="ifconfig route ping ntpdate mktemp env cat wc od bc tr stty"
-	sw_list="$sw_list arecord darkice stat glgsts sox head uniq curl dd"
+	sw_list="$sw_list arecord darkice stat glgsts sox head uniq curl dd aor"
 	sw_list="$sw_list insserv wget md5sum df find uname logger gcc hexdump"
 
 	_notify "Check installed software."
@@ -374,22 +375,38 @@ wdog_starter () {
 		fi
        	fi
 
-	if [ $type -eq 0 ]; then
-        	_notify "Scanner is uncontrolled."
+	case "$type" in
 
-	fi
+		0)
+        		_notify "Scanner is uncontrolled."
+			;;
 
-	if [ $type -eq 1 ]; then
-        	_notify "Scanner is controlled (Uniden)."
-        	while (true); do
-        		if [ -L /dev/scanners/$port ]; then
-            			stty -F /dev/scanners/$port 115200 raw
-				_info "Sending cmd VOL,$vol to port $sport"
-				/opt/bin/sendcmd.sh -s$port -c VOL,$vol
-            			break;
-        		fi
-        	done
-	fi
+		1)
+        		_notify "Scanner is controlled (Uniden)."
+        		while (true); do
+        			if [ -L /dev/scanners/$port ]; then
+            				stty -F /dev/scanners/$port 115200 raw
+					_info "Sending cmd VOL,$vol to port $sport"
+					/opt/bin/sendcmd.sh -s$port -c VOL,$vol
+            				break;
+        			fi
+        		done
+			;;
+
+		2)
+        		_notify "Scanner is controlled (AOR 8200 MK3)."
+        		while (true); do
+        			if [ -L /dev/scanners/$port ]; then
+            				stty -F /dev/scanners/$port 9600 raw
+					_info "Sending cmd LC1 to port $sport"
+					echo -ne "LC1\r" > /dev/scanners/$port
+            				break;
+        			fi
+        		done
+			;;
+
+	esac
+		
 
 	opts="--wdog --type $type --port $port --scard $scard"
 	opts="$opts --rec $rec --ihost $ihost --ipass $ipass"
@@ -630,6 +647,92 @@ uids=$(cat "$elogdir/$st".1 | clrsym.sed | tr ' ' '\n' | sed -e '/^$/d' | sed -e
 	fi
 }
 
+split2 () {
+
+	test -f $rec_file || _error "$rec_file does not exists"
+	test -f $rec_file || exit 1
+	test -f $log_file || _error "$log_file does not exists"
+	test -f $log_file || exit 1 
+        
+	local modt=$(stat -c %Y $rec_file)
+	
+	local elogdir=/tmp/EXT_${port}
+	local n=0
+	local code=""
+	local uids=""
+        local modt=$(stat -c %Y $rec_file)
+        local dur=$(soxi -D $rec_file | cut -d. -f1)
+        let opent=modt-dur
+        local rate=$(soxi -r ${rec_file})
+        local bits=$(soxi -b ${rec_file})
+        let bs=rate*bits/800
+
+	_debug "bs=$bs"
+
+	local yymmdd=$(date -d@$opent "+%Y%m%d")
+	local rec_dir=$scanner_audio/$yymmdd/REC
+	local log_dir=$scanner_audio/$yymmdd/LOG
+	local rec_file1=${rec_file##*/}
+	local log_file1=${log_file##*/}
+
+	mkdir -p $rec_dir
+	mkdir -p $log_dir
+
+	_info "moving $rec_file to $rec_dir."
+	rsync -t $rec_file $rec_dir
+	rm $rec_file
+
+	_info "moving $log_file to $log_dir."
+	rsync -t $log_file $log_dir
+	rm $log_file
+
+	_debug "loading $log_dir/$log_file1"
+
+	while read line; do
+
+	        local channel=$(echo $line | cut -d" " -f 2)
+	        local freq=$(echo $line | cut -d, -f 3)
+        	local ref=$(echo $line | cut -d, -f4)
+	        local st=$(echo $line | cut -d, -f5)
+        	local en=$(echo $line | cut -d, -f8)
+		local st0=$(echo $st | cut -d. -f1)
+
+		_debug "ref=$ref, st=$st, en=$en."
+
+	        [ "X$en" == "X" ] && en=$(echo "$ref+$dur" | bc)
+        	s1=$(echo "($st-$ref$scor)*100" | bc)
+	        s2=$(echo "($en-$st$ecor)*100" | bc)
+        	s1=$(echo $s1 | cut -d. -f1)
+	        s2=$(echo $s2 | cut -d. -f1)
+
+		_debug "s1=$s1, s2=$s2."
+
+		local fdp=$(date -d @$st0 +%Y-%m-%d_%Hh%Mm%Ss)
+		local yymmdd=$(date -d @$st0 +%Y%m%d)
+		local hh=$(date -d @$st0 +%H)
+                   	
+		filename="${fdp}_${freq}_MHz"
+		_debug "filename is $filename."
+
+                dir1="${scanner_audio}/${yymmdd}/${channel}/${hh}"
+		_debug "dir1 is $dir1."
+                test -d "$dir1" || mkdir -p "$dir1"
+
+	        _notify "extracting from $rec_dir/$rec_file1 to $dir1/${filename}.raw"
+		dd if=$rec_dir/$rec_file1 of=$dir1/${filename}.raw skip=$s1 bs=$bs count=$s2
+		_notify "encoding to $dir1/${filename}.raw to $dir1/${filename}.$format"
+		sox -c1 -b 16 -e signed-integer -r $srate $dir1/${filename}.raw $dir1/${filename}.$format			
+		rm $dir1/${filename}.raw
+
+	done < $log_dir/$log_file1
+
+	if [ "$format" != "wav" ]; then
+		local rec_file2=${rec_file1%.*}
+		sox $rec_dir/$rec_file1 $rec_dir/$rec_file2.$format
+		test -f $rec_dir/$rec_file2.$format && rm $rec_dir/$rec_file1
+	fi
+}
+
 split () {
 
 	_info "starting splitter."
@@ -651,7 +754,10 @@ split () {
 			;;
 		1)
 			split1
-			;;	
+			;;
+		2)
+			split2
+			;;
 	esac
 
 }
@@ -714,16 +820,10 @@ record () {
 				sw_killed=1
 			fi
 			;;	
-		1)
+		1|2)
 			if [ ! -f "$exe1" ]; then
 
 				_info "arecord with pid $(cat $apf) is dead."
-				sw_killed=1
-			fi
-
-			if [ ! -f "$exe2" ]; then
-				
-				_info "splitter with pid $(cat $spf) is dead."
 				sw_killed=1
 			fi
 
@@ -740,7 +840,7 @@ record () {
                 		
 				test -f "/proc/$(cat $apf)/exe" && kill -9 $(cat $apf)
                 		test -f "/proc/$(cat $lpf)/exe" && kill $(cat $lpf)
-				rm -r $elogdir
+				test -e $elogdir && rm -r $elogdir
 			fi
 			;;	
 	esac
@@ -767,28 +867,45 @@ record () {
 	opts="$opts --delay $delay --mindur $mindur --timez $timez"
 	opts="$opts --th $th --vol $vol --srate $srate --brate $brate"
 	opts="$opts --divm $divm --verbose $verbose"
+			
+	local nanos=$(stat -c %z $apf | cut -d. -f2)
+	local reftime=$(stat -c %Z $apf)
 
-	if [ $type -gt 0 ]; then
-		local nanos=$(stat -c %z $apf | cut -d. -f2)
-		local reftime=$(stat -c %Z $apf)
-		gopts="$gopts_gl -l $log_file -i $elogdir -r $reftime.${nanos:0:2}"
-		_info "starting glgsts with gopts: $gopts."
-		glgsts $gopts & echo $! > $lpf
+	case "$type" in
 
-		opts="$opts --log-file $log_file --rec-file $rec_file"
+		2)
+			aropts="$aropts_gl -l $log_file -r $reftime.${nanos:0:2}"
+			_info "starting aor with gopts: $gopts."
+			aor $aropts & echo $! > $lpf
+
+			opts="$opts --log-file $log_file --rec-file $rec_file"
 		
-		_info "starting split with $opts."
+			_info "starting split with $opts."
 
-		recorder.sh $opts & echo $! > $spf
-	else
-		_info "split env: $rec_file"
-	
-		opts="$opts --rec-file $rec_file"
+			recorder.sh $opts & echo $! > $spf
+			;;
+
+		1)
+			gopts="$gopts_gl -l $log_file -i $elogdir -r $reftime.${nanos:0:2}"
+			_info "starting glgsts with gopts: $gopts."
+			glgsts $gopts & echo $! > $lpf
+
+			opts="$opts --log-file $log_file --rec-file $rec_file"
 		
-		_info "starting split with $opts."
+			_info "starting split with $opts."
+
+			recorder.sh $opts & echo $! > $spf
+			;;
+		0)
+			_info "split env: $rec_file"
 	
-		recorder.sh $opts & echo $! > $spf
-	fi
+			opts="$opts --rec-file $rec_file"
+		
+			_info "starting split with $opts."
+	
+			recorder.sh $opts & echo $! > $spf
+			;;
+	esac
 
 	_info "arecord started with pid $(cat $apf)."
 	_notify "recording to $rec_file"
@@ -976,6 +1093,8 @@ install () {
 
 	_info "compiling glgsts utility for arch $arch."
 	gcc glgsts.c -o /opt/bin/glgsts
+	_info "compiling aor utility for arch $arch."
+	gcc aor.c -o /opt/bin/aor
 
 }
 
@@ -1276,6 +1395,7 @@ aopts="-Dplug:dsnoop${scard} -f S16_LE -r $srate"
 aopts="$aopts -c 1 -q -t wav -d $divm --process-id-file $apf"
 lopts="-S -m m -q9 -b $brate -"
 gopts_gl="-d /dev/scanners/${port} -t $delay -p $scanner_lck"
+aropts_gl="-d /dev/scanners/${port}"
 
 stopf="/tmp/stop${port}"
 darkice_conf="/tmp/darkice${port}.conf"

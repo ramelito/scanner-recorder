@@ -33,7 +33,9 @@ main (int argc, char** argv) {
 	char buffer[1];
 	size_t nbytes;
 	const char nl='\n';
+	const char nlr='\r';
 	int was_nl=0;
+	int sql=0;
 	struct timeval tmval;
 	double time;
 	ssize_t nn;
@@ -54,7 +56,7 @@ main (int argc, char** argv) {
              reftime = atof(optarg);
              break;
            case '?':
-             if (optopt == 'd' || optopt == 's' || optopt == 'l' || optopt == 'r' || optopt == 'i')
+             if (optopt == 'd' || optopt == 'l' || optopt == 'r')
                fprintf (stderr, "Option -%c requires an argument.\n", optopt);
              else if (isprint (optopt))
                fprintf (stderr, "Unknown option `-%c'.\n", optopt);
@@ -79,14 +81,19 @@ main (int argc, char** argv) {
 		gettimeofday(&tmval, NULL);
 		time=tmval.tv_sec + (tmval.tv_usec/1000000.0);
 		nn=read(fd,buffer,nbytes);
-		if (was_nl == 0) {
-			if (buffer[0] == nl) {
-				fprintf (fp, " %.2f %.2f\n", reftime, time );
+		if (buffer[0] == nl || buffer[0] == nlr) {
+			if (sql == 0 && was_nl == 0) {
+				fprintf (fp, " %.2f %.2f ", reftime, time );
+				sql=1;
 				was_nl=1;
-			} else {
-				fprintf (fp, "%c", buffer[0] );
 			}
-		} else {
+			if (sql == 1 && was_nl == 0) {
+				fprintf (fp, " %.2f\n", time );
+				sql=0;
+				was_nl=1;
+			}
+		} else 	{
+			fprintf (fp, "%c", buffer[0] );
 			was_nl=0;
 		}
 		fflush (fp);
