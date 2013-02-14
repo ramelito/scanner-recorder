@@ -29,7 +29,7 @@ workbin=/opt/bin
 scanner_audio="/scanner_audio"
 config="/opt/etc/record.conf"
 asound_conf="/etc/asound.conf"
-hardware="omap3beagle"
+hardware="Intel"
 ms_action=""
 wstart=""
 _wdog=""
@@ -134,7 +134,7 @@ chk_sw () {
 	local fail=0
 	local sw_list="ifconfig route ping ntpdate mktemp env cat wc od bc tr stty"
 	sw_list="$sw_list arecord darkice stat glgsts sox head uniq curl dd aor"
-	sw_list="$sw_list insserv wget md5sum df find uname logger gcc hexdump"
+	sw_list="$sw_list wget md5sum df find uname logger gcc hexdump"
 
 	_notify "Check installed software."
 
@@ -656,10 +656,7 @@ split2 () {
         
 	local modt=$(stat -c %Y $rec_file)
 	
-	local elogdir=/tmp/EXT_${port}
 	local n=0
-	local code=""
-	local uids=""
         local modt=$(stat -c %Y $rec_file)
         local dur=$(soxi -D $rec_file | cut -d. -f1)
         let opent=modt-dur
@@ -691,10 +688,10 @@ split2 () {
 	while read line; do
 
 	        local channel=$(echo $line | cut -d" " -f 2)
-	        local freq=$(echo $line | cut -d, -f 3)
-        	local ref=$(echo $line | cut -d, -f4)
-	        local st=$(echo $line | cut -d, -f5)
-        	local en=$(echo $line | cut -d, -f8)
+	        local freq=$(echo $line | cut -d" " -f 3)
+        	local ref=$(echo $line | cut -d" " -f4)
+	        local st=$(echo $line | cut -d" " -f5)
+        	local en=$(echo $line | cut -d" " -f8)
 		local st0=$(echo $st | cut -d. -f1)
 
 		_debug "ref=$ref, st=$st, en=$en."
