@@ -29,7 +29,7 @@ workbin=/opt/bin
 scanner_audio="/scanner_audio"
 config="/opt/etc/record.conf"
 asound_conf="/etc/asound.conf"
-hardware="Intel"
+hardware="omap3beagle"
 ms_action=""
 wstart=""
 _wdog=""
@@ -37,6 +37,7 @@ _split=""
 _update=""
 do_clean="1"
 format="wav"
+aor_data=/tmp/aor_data
 
 test -f $HOME/.recorderc && source $HOME/.recorderc
 
@@ -395,14 +396,20 @@ wdog_starter () {
 
 		2)
         		_notify "Scanner is controlled (AOR 8200 MK3)."
-        		while (true); do
-        			if [ -L /dev/scanners/$port ]; then
-            				stty -F /dev/scanners/$port 9600 raw
-					_info "Sending cmd LC1 to port $sport"
-					echo -ne "LC1\r" > /dev/scanners/$port
-            				break;
-        			fi
-        		done
+        		if [ -L /dev/scanners/$port ]; then
+            			stty -F /dev/scanners/$port 9600 raw
+				echo "MAA" > /tmp/aor_mread
+				for i in $(seq 1 99); do
+					echo "MA" >> /tmp/aor_mread
+				done
+				for i in $(seq 1 4); do
+					echo "SR" >> /tmp/aor_mread
+				done
+				echo -en "TB\nTB\nLC1\n" >> /tmp/aor_mread 
+				_notify "Dumping memory banks."
+				/opt/bin/rwcom_aor -d /dev/scanners/$port -f /tmp/aor_mread -s500000 >> $aor_data
+				_info "Sending cmd LC1 to port $sport"
+        		fi
 			;;
 
 	esac
@@ -512,7 +519,8 @@ split0 () {
 		mkdir -p $split_dir
 		_notify "moving $outwav to $split_dir/$fname1."
 		if [ "$format" == "wav" ]; then
-			mv $outwav $split_dir/$fname1.wav
+			sox $outwav $split_dir/$fname1.wav gain -n
+			rm $outwav
 		else
                        	sox $outwav $split_dir/$fname1.$format
 			rm $outwav
@@ -585,6 +593,8 @@ split1 () {
 	        s2=$(echo $s2 | cut -d. -f1)
 
 		_debug "s1=$s1, s2=$s2."
+		test $s1 -lt 0 && s1=0
+		test $s2 -lt $mindur && continue
 
 		local fdp=$(date -d @$st0 +%Y-%m-%d_%Hh%Mm%Ss)
 		local yymmdd=$(date -d @$st0 +%Y%m%d)
@@ -635,7 +645,7 @@ uids=$(cat "$elogdir/$st".1 | clrsym.sed | tr ' ' '\n' | sed -e '/^$/d' | sed -e
 	        _notify "extracting from $rec_dir/$rec_file1 to $dir1/${filename}.raw"
 		dd if=$rec_dir/$rec_file1 of=$dir1/${filename}.raw skip=$s1 bs=$bs count=$s2
 		_notify "encoding to $dir1/${filename}.raw to $dir1/${filename}.$format"
-		sox -c1 -b 16 -e signed-integer -r $srate $dir1/${filename}.raw $dir1/${filename}.$format			
+		sox -c1 -b 16 -e signed-integer -r $srate $dir1/${filename}.raw $dir1/${filename}.$format gain -n			
 		rm $dir1/${filename}.raw
 
 	done < $log_dir/$log_file1
@@ -687,8 +697,37 @@ split2 () {
 
 	while read line; do
 
+		local sql=$(echo $line | cut -d" " -f 1)
+		sql=${sql:2:1}
+		_debug "sql is $sql"
+		if [ "$sql" == "%" ]; then
+			_debug "discarding this line."
+			continue
+		fi
 	        local channel=$(echo $line | cut -d" " -f 2)
+		local mode=${channel:0:2}
+
+		if [ -e $aor_data ]; then
+			case $mode in
+				SR)
+					channel1=$(grep $channel $aor_data | awk '{print $8}' | sed -e 's/TT//g')
+					;;
+				MX)
+					bank=${channel:2:1}
+					channel1=$(grep $channel $aor_data | awk '{print $8}' | sed -e 's/TM//g')
+					group=$(grep TB$bank $aor_data | awk '{print $3}' | sed -e "s/TB$bank//g")
+					;;
+			esac
+
+			_debug "channel1 $channel1 bank $bank group $group"
+			test "X$channel1" == "X" || channel=$channel1
+
+		fi
+
 	        local freq=$(echo $line | cut -d" " -f 3)
+		local mhz=${freq:2:4}
+		local khz=${freq:6:4}
+		freq=${mhz}.${khz}
         	local ref=$(echo $line | cut -d" " -f4)
 	        local st=$(echo $line | cut -d" " -f5)
         	local en=$(echo $line | cut -d" " -f8)
@@ -703,6 +742,9 @@ split2 () {
 	        s2=$(echo $s2 | cut -d. -f1)
 
 		_debug "s1=$s1, s2=$s2."
+		
+		test $s1 -lt 0 && s1=0
+		test $s2 -lt $mindur && continue
 
 		local fdp=$(date -d @$st0 +%Y-%m-%d_%Hh%Mm%Ss)
 		local yymmdd=$(date -d @$st0 +%Y%m%d)
@@ -712,13 +754,15 @@ split2 () {
 		_debug "filename is $filename."
 
                 dir1="${scanner_audio}/${yymmdd}/${channel}/${hh}"
+		test "$mode" == "SR" && dir1="${scanner_audio}/${yymmdd}/${channel}/${freq}/${hh}"
+		test "X$group" == "X" || dir1="${scanner_audio}/${yymmdd}/${group}/${channel}/${hh}"
 		_debug "dir1 is $dir1."
                 test -d "$dir1" || mkdir -p "$dir1"
 
 	        _notify "extracting from $rec_dir/$rec_file1 to $dir1/${filename}.raw"
 		dd if=$rec_dir/$rec_file1 of=$dir1/${filename}.raw skip=$s1 bs=$bs count=$s2
 		_notify "encoding to $dir1/${filename}.raw to $dir1/${filename}.$format"
-		sox -c1 -b 16 -e signed-integer -r $srate $dir1/${filename}.raw $dir1/${filename}.$format			
+		sox -c1 -b 16 -e signed-integer -r $srate $dir1/${filename}.raw $dir1/${filename}.$format gain -n
 		rm $dir1/${filename}.raw
 
 	done < $log_dir/$log_file1
@@ -1092,6 +1136,7 @@ install () {
 	gcc glgsts.c -o /opt/bin/glgsts
 	_info "compiling aor utility for arch $arch."
 	gcc aor.c -o /opt/bin/aor
+	gcc rwcom_aor.c -o /opt/bin/rwcom_aor
 
 }
 
