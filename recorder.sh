@@ -809,6 +809,7 @@ update () {
 
 	prevline="EMPTY"
 	metarfile="/tmp/${icao}.metar"
+	curlout="/dev/null"
 
 	while (true); do
 
