@@ -35,7 +35,7 @@ wstart=""
 _wdog=""
 _split=""
 _update=""
-do_clean="1"
+do_clean="0"
 format="wav"
 aor_data=/tmp/aor_data
 
@@ -266,8 +266,8 @@ main_starter () {
 				test "X$s0_profile" == "X" && s0_profile="lq"
 				test "X$s0_scor" == "X" && s0_scor=0
 				test "X$s0_ecor" == "X" && s0_ecor=0
-				test "X$s0_delay" == "X" && s0_delay="0.8"
-				test "X$s0_mindur" == "X" && s0_mindur="2.5"
+				test "X$s0_delay" == "X" && s0_delay="800"
+				test "X$s0_mindur" == "X" && s0_mindur="2500"
 				test "X$s0_timez" == "X" && s0_timez="UTC"
 				test "X$s0_th" == "X" && s0_th="-48"
 				test "X$s0_vol" == "X" && s0_vol=4
@@ -398,16 +398,16 @@ wdog_starter () {
         		_notify "Scanner is controlled (AOR 8200 MK3)."
         		if [ -L /dev/scanners/$port ]; then
             			stty -F /dev/scanners/$port 9600 raw
-				echo "MAA" > /tmp/aor_mread
+				echo -en "LC0\nVF\nMAA\n" > /tmp/aor_mread
 				for i in $(seq 1 99); do
 					echo "MA" >> /tmp/aor_mread
 				done
 				for i in $(seq 1 4); do
 					echo "SR" >> /tmp/aor_mread
 				done
-				echo -en "TB\nTB\nLC1\n" >> /tmp/aor_mread 
+				echo -en "TB\nTB\nLC1\nMS\n" >> /tmp/aor_mread 
 				_notify "Dumping memory banks."
-				/opt/bin/rwcom_aor -d /dev/scanners/$port -f /tmp/aor_mread -s500000 >> $aor_data
+				/opt/bin/rwcom_aor -d /dev/scanners/$port -f /tmp/aor_mread -s1000000 > $aor_data
 				_info "Sending cmd LC1 to port $sport"
         		fi
 			;;
@@ -693,7 +693,52 @@ split2 () {
 	rsync -t $log_file $log_dir
 	rm $log_file
 
-	_debug "loading $log_dir/$log_file1"
+	_debug "preprocessing $log_dir/$log_file1"
+
+	log_file2=${log_file1%.*}
+	log_file2=${log_file2}_mod.log
+
+	nl=$(cat $log_dir/$log_file1 | wc -l)
+	let nl=nl-1
+
+	for i in $(seq 1 $nl); do
+
+        	let j=i+1
+
+	        chan_i=$(sed -n "${i}p" $log_dir/$log_file1 | awk '{printf $2}')
+        	chan_j=$(sed -n "${j}p"  $log_dir/$log_file1 | awk '{printf $2}')
+
+	        t1_i=$(sed -n "${i}p" $log_dir/$log_file1 | awk '{printf $5}')
+        	t1_j=$(sed -n "${j}p" $log_dir/$log_file1 | awk '{printf $5}')
+
+	        t2_i=$(sed -n "${i}p" $log_dir/$log_file1 | awk '{printf $8}')
+        	t2_j=$(sed -n "${j}p" $log_dir/$log_file1 | awk '{printf $8}')
+
+        	test "X$chan" == "X" && chan=$chan_i
+	        test "X$t1" == "X" && t1=$t1_i
+		test "X$sql" == "X" && sql=$(sed -n "${i}p" $log_dir/$log_file1 | awk '{printf $1}')
+		test "X$freq" == "X" && freq=$(sed -n "${i}p" $log_dir/$log_file1 | awk '{printf $3}')
+		test "X$st0" == "X" && st0=$(sed -n "${i}p" $log_dir/$log_file1 | awk '{printf $4}')
+
+        	if [ "$chan_i" == "$chan_j" ]; then
+                	diff=$(echo "($t1_j-$t2_i)*1000" | bc | cut -d. -f1)
+                	if [ $diff -gt $delay ]; then
+                		echo "$sql $chan $freq $st0 $t1 $t2_i"
+	                        chan=""
+        	                t1=""
+                	        sql=""
+				freq=""
+				st0=""
+                	fi
+        	else
+                	echo "$sql $chan $freq $st0 $t1 $t2_i"
+	                chan=""
+        	        t1=""
+                	sql=""
+			freq=""
+			st0=""
+        	fi
+	done > $log_dir/$log_file2
 
 	while read line; do
 
@@ -730,7 +775,7 @@ split2 () {
 		freq=${mhz}.${khz}
         	local ref=$(echo $line | cut -d" " -f4)
 	        local st=$(echo $line | cut -d" " -f5)
-        	local en=$(echo $line | cut -d" " -f8)
+        	local en=$(echo $line | cut -d" " -f6)
 		local st0=$(echo $st | cut -d. -f1)
 
 		_debug "ref=$ref, st=$st, en=$en."
@@ -742,9 +787,10 @@ split2 () {
 	        s2=$(echo $s2 | cut -d. -f1)
 
 		_debug "s1=$s1, s2=$s2."
-		
+	
+		let mindur10=mindur/10
 		test $s1 -lt 0 && s1=0
-		test $s2 -lt $mindur && continue
+		test $s2 -lt $mindur10 && continue
 
 		local fdp=$(date -d @$st0 +%Y-%m-%d_%Hh%Mm%Ss)
 		local yymmdd=$(date -d @$st0 +%Y%m%d)
@@ -765,7 +811,7 @@ split2 () {
 		sox -c1 -b 16 -e signed-integer -r $srate $dir1/${filename}.raw $dir1/${filename}.$format gain -n
 		rm $dir1/${filename}.raw
 
-	done < $log_dir/$log_file1
+	done < $log_dir/$log_file2
 
 	if [ "$format" != "wav" ]; then
 		local rec_file2=${rec_file1%.*}
@@ -810,21 +856,54 @@ update () {
 	prevline="EMPTY"
 	metarfile="/tmp/${icao}.metar"
 	curlout="/dev/null"
-
 	while (true); do
 
 	        sleep 1
 	        
 		yyyymmdd=$(date +%Y%m%d)
 
-	        slog="$(find /tmp -name *${port}.log -mmin -1)"
+	        slog=$(find /tmp -name "*${port}.log" -mmin -1)
 
         	[ "X$slog" == "X" ] && continue
 		
-	        if [ ! -e $slog ]; then
+	        if [ ! -e "$slog" ]; then
         	        curline=""
 	        else
-        	        curline=$(tail -1 $slog | awk -F, '{print $6" "$7" "$8" "$2}' | sed -e 's/ /+/g')
+			case "$type" in
+				1)
+        	        		curline=$(tail -1 $slog | awk -F, '{print $6" "$7" "$8" "$2}' | sed -e 's/ /+/g')
+				;;
+				2)
+			                local channel=$(tail -1 $slog | cut -d" " -f 2)
+				        local freq=$(tail -1 $slog | cut -d" " -f 3)
+			                local mode=${channel:0:2}
+					
+					_debug "slog $slog"	
+					_debug "channel $channel"	
+					_debug "freq $freq"	
+					_debug "mode $mode"
+
+			                if [ -e $aor_data ]; then
+                        			case $mode in
+                                		SR)
+                                	        	channel1=$(grep $channel $aor_data | awk '{print $8}' | sed -e 's/TT//g')
+                                        	;;
+                                		MX)
+                                        		bank=${channel:2:1}
+                                        		channel1=$(grep $channel $aor_data | awk '{print $8}' | sed -e 's/TM//g')
+                                        		group=$(grep TB$bank $aor_data | awk '{print $3}' | sed -e "s/TB$bank//g")
+                                        	;;
+                        			esac
+
+                        			_debug "channel1 $channel1 bank $bank group $group"
+                        			test "X$channel1" == "X" || channel=$channel1
+					        local mhz=${freq:2:4}
+				                local khz=${freq:6:4}
+                				freq=${mhz}.${khz}
+						curline=$(echo "$group $channel $freq" | sed -e 's/ /+/g')
+                			fi
+				;;
+			esac
 	        fi
 
         	if [ ! -e $metarfile ]; then
@@ -834,8 +913,8 @@ update () {
 	        fi
         	if [ "$prevline" != "$curline" ]; then
 		        _info "change in $slog detected."
-			_debug "update $ihost:${iport}/$imount ... "
-			_debug "... with $curline+$metar"
+			_notify "update $ihost:${iport}/$imount ... "
+			_notify "... with $curline+$metar"
                 	webaddr="http://${ihost}:${iport}/admin/metadata?mount=/${imount}&mode=updinfo&song=$curline+$metar"
 	                curl -o $curlout -u source:${ipass} $webaddr
         	fi
@@ -1137,7 +1216,6 @@ install () {
 	gcc glgsts.c -o /opt/bin/glgsts
 	_info "compiling aor utility for arch $arch."
 	gcc aor.c -o /opt/bin/aor
-	gcc rwcom_aor.c -o /opt/bin/rwcom_aor
 
 }
 
@@ -1245,57 +1323,42 @@ clean () {
 
 	_info "free at least $onehourleft bytes."
 
-	while (true); do
-	
-		sleep 300
-		cd $scanner_audio
+	cd $scanner_audio
 
-		kbytes=$(df . | tail -1 | awk -F" " '{print $4}')
-		let bytes=kbytes*1024
+	kbytes=$(df . | tail -1 | awk -F" " '{print $4}')
+	let bytes=kbytes*1024
 
-		_info "there are $bytes free bytes."
+	_info "there are $bytes free bytes."
 
-		if [ $bytes -ge $onehourleft ]; then
-			_notify "$bytes greater $onehourleft, exiting."
-			_debug "remove $clrlist."
-			rm $clrlist
-			continue
-		fi
-
-		_info "building list of files ..."
-
-		find . -printf "%A@ %p\n" | sort -n > $clrlist
-
-		_info "reading list until free needed space."
-
-		while [ $bytes -lt $onehourleft ]; do
-			file=$(cat $clrlist | head -1 | awk -F" " '{print $2}')
-			if [ ! -d $file ]; then
-		        	rm $file
-				_debug "removing file $file."
-				kbytes=$(df . | tail -1 | awk -F" " '{print $4}')
-				let bytes=kbytes*1024
-	  			_debug "$bytes bytes free."
-				xpath=${file%/*}
-				if [ "X$(ls -1A $xpath)" == "X" ]; then
-					_debug "$xpath directory is empty, let's delete it."
-					rmdir $xpath
-		    		fi
-    			else
-        			if [ "X$(ls -1A $file)" == "X" ]; then
-		        		_info "$file directory is empty, let's delete it."
-            				rmdir $file
-	    			fi
-	    		fi
-			tail -n+2 $clrlist > ${clrlist}.new
-			mv ${clrlist}.new $clrlist
-		done
+	if [ $bytes -ge $onehourleft ]; then
+		_notify "$bytes greater $onehourleft, exiting."
 		_debug "remove $clrlist."
 		rm $clrlist
+	fi
+
+	_info "building list of files ..."
+
+	find . -printf "%A@ %p\n" | sort -n > $clrlist
+
+	_info "reading list until free needed space."
+	while read line; do
+		file=$(echo $line | awk '{print $2}')
+		if [ ! -d $file ]; then
+			rm $file
+			_debug "removing file $file."
+			kbytes=$(df . | tail -1 | awk -F" " '{print $4}')
+			let bytes=kbytes*1024
+	                _debug "$bytes bytes free."
+		fi
+	        if [ $bytes -gt $onehourleft ]; then
+        	        break;
+	        fi
+        done < $clrlist
+	_debug "remove $clrlist."
+	rm $clrlist
 	
-		kbytes=$(df . | tail -1 | awk -F" " '{print $4}')
-		_notify "$kbytes available after cleaning."
-	done
+	kbytes=$(df . | tail -1 | awk -F" " '{print $4}')
+	_notify "$kbytes available after cleaning."
 }
 
 modem_up () {
