@@ -266,7 +266,7 @@ main_starter () {
 				test "X$s0_profile" == "X" && s0_profile="lq"
 				test "X$s0_scor" == "X" && s0_scor=0
 				test "X$s0_ecor" == "X" && s0_ecor=0
-				test "X$s0_delay" == "X" && s0_delay="800"
+				test "X$s0_delay" == "X" && s0_delay="1000"
 				test "X$s0_mindur" == "X" && s0_mindur="2500"
 				test "X$s0_timez" == "X" && s0_timez="UTC"
 				test "X$s0_th" == "X" && s0_th="-48"
@@ -380,18 +380,20 @@ wdog_starter () {
 
 		0)
         		_notify "Scanner is uncontrolled."
+			delay1=$delay
 			;;
 
 		1)
         		_notify "Scanner is controlled (Uniden)."
-        		while (true); do
-        			if [ -L /dev/scanners/$port ]; then
-            				stty -F /dev/scanners/$port 115200 raw
-					_info "Sending cmd VOL,$vol to port $sport"
-					/opt/bin/sendcmd.sh -s$port -c VOL,$vol
-            				break;
-        			fi
-        		done
+        		#while (true); do
+        		#	if [ -L /dev/scanners/$port ]; then
+            		#		stty -F /dev/scanners/$port 115200 raw
+			#		_info "Sending cmd VOL,$vol to port $sport"
+			#		/opt/bin/sendcmd.sh -s$port -c VOL,$vol
+            		#		break;
+        		#	fi
+        		#done
+			delay1=$(echo "$delay/1000" | bc)	
 			;;
 
 		2)
@@ -409,6 +411,7 @@ wdog_starter () {
 				_notify "Dumping memory banks."
 				/opt/bin/rwcom_aor -d /dev/scanners/$port -f /tmp/aor_mread -s1000000 > $aor_data
 				_info "Sending cmd LC1 to port $sport"
+				delay1=$delay
         		fi
 			;;
 
@@ -419,7 +422,7 @@ wdog_starter () {
 	opts="$opts --rec $rec --ihost $ihost --ipass $ipass"
 	opts="$opts --imount $imount --profile $profile"
 	opts="$opts --icao $icao --scor $scor --ecor $ecor"
-	opts="$opts --delay $delay --mindur $mindur --timez $timez"
+	opts="$opts --delay $delay1 --mindur $mindur --timez $timez"
 	opts="$opts --th $th --vol $vol --srate $srate --brate $brate"
 	opts="$opts --verbose $verbose --divm $divm"
 	_info "$opts"
@@ -593,8 +596,9 @@ split1 () {
 	        s2=$(echo $s2 | cut -d. -f1)
 
 		_debug "s1=$s1, s2=$s2."
+		let mindur1=mindur/10
 		test $s1 -lt 0 && s1=0
-		test $s2 -lt $mindur && continue
+		test $s2 -lt $mindur1 && continue
 
 		local fdp=$(date -d @$st0 +%Y-%m-%d_%Hh%Mm%Ss)
 		local yymmdd=$(date -d @$st0 +%Y%m%d)
@@ -1500,7 +1504,8 @@ scanner_lck="/tmp/scanner${port}.lck"
 aopts="-Dplug:dsnoop${scard} -f S16_LE -r $srate"
 aopts="$aopts -c 1 -q -t wav -d $divm --process-id-file $apf"
 lopts="-S -m m -q9 -b $brate -"
-gopts_gl="-d /dev/scanners/${port} -t $delay -p $scanner_lck"
+delay1=$(echo "$delay/1000" | bc)
+gopts_gl="-d /dev/scanners/${port} -t $delay1 -p $scanner_lck"
 aropts_gl="-d /dev/scanners/${port}"
 
 stopf="/tmp/stop${port}"
