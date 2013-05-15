@@ -296,7 +296,6 @@ main_starter () {
 			for stops in $(ls /tmp/stop*); do
 				_notify "stopping recorder ($stops)."
 				echo 1 > $stops
-				test -f /tmp/clean.pid && kill $(cat /tmp/clean.pid)
 			done
 		;;
 	esac
@@ -584,14 +583,14 @@ split1 () {
 	rm $log_file
 	
 	_info "removing dcshift from audio."
-	local dcshift=$(sox $rec_dir/$rec_file1.wav -n stats 2>&1 | awk '/DC offset/ { print $3 }')
-	_debug "dcshift value for $rec_file1.wav is $dcshift"
+	local dcshift=$(sox $rec_dir/$rec_file1 -n stats 2>&1 | awk '/DC offset/ { print $3 }')
+	_debug "dcshift value for $rec_file1 is $dcshift"
 	_debug "inverting value."
 	dcshift=$(echo "scale=2;$dcshift*(-1)" | bc)
-	_debug "soxing to intermediate file $rec_dir/${rec_file1}_dc0.wav"
-	sox $rec_dir/$rec_file1.wav $rec_dir/${rec_file1}_dc0.wav dcshift $dcshift
-	_debug "moving $rec_dir/${rec_file1}_dc0.wav to $rec_dir/$rec_file1.wav"
-	mv $rec_dir/${rec_file1}_dc0.wav $rec_dir/$rec_file1.wav
+	_debug "soxing to intermediate file $rec_dir/dc0_${rec_file1}.wav"
+	sox $rec_dir/$rec_file1 $rec_dir/dc0_${rec_file1}.wav dcshift $dcshift
+	_debug "moving $rec_dir/dc0_${rec_file1}.wav to $rec_dir/$rec_file1"
+	mv $rec_dir/dc0_${rec_file1}.wav $rec_dir/$rec_file1
 
 	_debug "loading $log_dir/$log_file1"
 
@@ -669,7 +668,7 @@ uids=$(cat "$elogdir/$st".1 | clrsym.sed | tr ' ' '\n' | sed -e '/^$/d' | sed -e
 	        _notify "extracting from $rec_dir/$rec_file1 to $dir1/${filename}.raw"
 		dd if=$rec_dir/$rec_file1 of=$dir1/${filename}.raw skip=$s1 bs=$bs count=$s2
 		_notify "encoding to $dir1/${filename}.raw to $dir1/${filename}.$format"
-		sox -c1 -b 16 -e signed-integer -r $srate $dir1/${filename}.raw $dir1/${filename}.$format gain -n			
+		sox -c1 -b 16 -e signed-integer -r $srate $dir1/${filename}.raw $dir1/${filename}.$format gain -n 2>/dev/null			
 		rm $dir1/${filename}.raw
 
 	done < $log_dir/$log_file1
@@ -718,14 +717,14 @@ split2 () {
 	rm $log_file
 	
 	_info "removing dcshift from audio."
-	local dcshift=$(sox $rec_dir/$rec_file1.wav -n stats 2>&1 | awk '/DC offset/ { print $3 }')
-	_debug "dcshift value for $rec_file1.wav is $dcshift"
+	local dcshift=$(sox $rec_dir/$rec_file1 -n stats 2>&1 | awk '/DC offset/ { print $3 }')
+	_debug "dcshift value for $rec_file1 is $dcshift"
 	_debug "inverting value."
 	dcshift=$(echo "scale=2;$dcshift*(-1)" | bc)
-	_debug "soxing to intermediate file $rec_dir/${rec_file1}_dc0.wav"
-	sox $rec_dir/$rec_file1.wav $rec_dir/${rec_file1}_dc0.wav dcshift $dcshift
-	_debug "moving $rec_dir/${rec_file1}_dc0.wav to $rec_dir/$rec_file1.wav"
-	mv $rec_dir/${rec_file1}_dc0.wav $rec_dir/$rec_file1.wav
+	_debug "soxing to intermediate file $rec_dir/dc0_${rec_file1}.wav"
+	sox $rec_dir/$rec_file1 $rec_dir/dc0_${rec_file1}.wav dcshift $dcshift
+	_debug "moving $rec_dir/dc0_${rec_file1}.wav to $rec_dir/$rec_file1"
+	mv $rec_dir/dc0_${rec_file1}.wav $rec_dir/$rec_file1
 
 	_debug "preprocessing $log_dir/$log_file1"
 
@@ -947,10 +946,10 @@ update () {
 	        fi
         	if [ "$prevline" != "$curline" ]; then
 		        _info "change in $slog detected."
-			_notify "update $ihost:${iport}/$imount ... "
-			_notify "... with $curline+$metar"
+			_info "update $ihost:${iport}/$imount ... "
+			_info "... with $curline+$metar"
                 	webaddr="http://${ihost}:${iport}/admin/metadata?mount=/${imount}&mode=updinfo&song=$curline+$metar"
-	                curl -o $curlout -u source:${ipass} $webaddr
+	                curl -o $curlout -u source:${ipass} $webaddr 2>/dev/null
         	fi
         	prevline="$curline";
 	done
