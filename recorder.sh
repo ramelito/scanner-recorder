@@ -483,9 +483,19 @@ split0 () {
 	rsync -t $rec_file $rec_dir
 	rm $rec_file
 
+	_info "removing dcshift from audio."
+	local dcshift=$(sox $rec_dir/$rec_file1.wav -n stats 2>&1 | awk '/DC offset/ { print $3 }')
+	_debug "dcshift value for $rec_file1.wav is $dcshift"
+	_debug "inverting value."
+	dcshift=$(echo "scale=2;$dcshift*(-1)" | bc)
+	_debug "soxing to intermediate file $rec_dir/${rec_file1}_dc0.wav"
+	sox $rec_dir/$rec_file1.wav $rec_dir/${rec_file1}_dc0.wav dcshift $dcshift
+	_debug "moving $rec_dir/${rec_file1}_dc0.wav to $rec_dir/$rec_file1.wav"
+	mv $rec_dir/${rec_file1}_dc0.wav $rec_dir/$rec_file1.wav
+
 	_info "starting sox to split file."
 	_debug "sox $rec_dir/$rec_file1.wav $tmp_dir/${opent}_.wav silence 1 0.5 ${th}d 1 0.5 ${th}d ..."
-	sox $rec_dir/$rec_file1.wav $tmp_dir/${opent}_.wav silence 1 0.5 ${th}d 1 0.5 ${th}d : newfile : restart
+	sox $rec_dir/$rec_file1.wav $tmp_dir/${opent}_.wav silence 1 0.5 ${th}d 1 1.5 ${th}d : newfile : restart
 
 	if [ "$format" != "wav" ]; then
 		sox $rec_dir/$rec_file1.wav $rec_dir/$rec_file1.$format
@@ -572,6 +582,16 @@ split1 () {
 	_info "moving $log_file to $log_dir."
 	rsync -t $log_file $log_dir
 	rm $log_file
+	
+	_info "removing dcshift from audio."
+	local dcshift=$(sox $rec_dir/$rec_file1.wav -n stats 2>&1 | awk '/DC offset/ { print $3 }')
+	_debug "dcshift value for $rec_file1.wav is $dcshift"
+	_debug "inverting value."
+	dcshift=$(echo "scale=2;$dcshift*(-1)" | bc)
+	_debug "soxing to intermediate file $rec_dir/${rec_file1}_dc0.wav"
+	sox $rec_dir/$rec_file1.wav $rec_dir/${rec_file1}_dc0.wav dcshift $dcshift
+	_debug "moving $rec_dir/${rec_file1}_dc0.wav to $rec_dir/$rec_file1.wav"
+	mv $rec_dir/${rec_file1}_dc0.wav $rec_dir/$rec_file1.wav
 
 	_debug "loading $log_dir/$log_file1"
 
@@ -696,6 +716,16 @@ split2 () {
 	_info "moving $log_file to $log_dir."
 	rsync -t $log_file $log_dir
 	rm $log_file
+	
+	_info "removing dcshift from audio."
+	local dcshift=$(sox $rec_dir/$rec_file1.wav -n stats 2>&1 | awk '/DC offset/ { print $3 }')
+	_debug "dcshift value for $rec_file1.wav is $dcshift"
+	_debug "inverting value."
+	dcshift=$(echo "scale=2;$dcshift*(-1)" | bc)
+	_debug "soxing to intermediate file $rec_dir/${rec_file1}_dc0.wav"
+	sox $rec_dir/$rec_file1.wav $rec_dir/${rec_file1}_dc0.wav dcshift $dcshift
+	_debug "moving $rec_dir/${rec_file1}_dc0.wav to $rec_dir/$rec_file1.wav"
+	mv $rec_dir/${rec_file1}_dc0.wav $rec_dir/$rec_file1.wav
 
 	_debug "preprocessing $log_dir/$log_file1"
 
@@ -1504,7 +1534,7 @@ scanner_lck="/tmp/scanner${port}.lck"
 aopts="-Dplug:dsnoop${scard} -f S16_LE -r $srate"
 aopts="$aopts -c 1 -q -t wav -d $divm --process-id-file $apf"
 lopts="-S -m m -q9 -b $brate -"
-delay1=$(echo "$delay/1000" | bc)
+test "X$delay" == "X" || delay1=$(echo "$delay/1000" | bc)
 gopts_gl="-d /dev/scanners/${port} -t $delay1 -p $scanner_lck"
 aropts_gl="-d /dev/scanners/${port}"
 
