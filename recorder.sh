@@ -552,7 +552,7 @@ split1 () {
         
 	local modt=$(stat -c %Y $rec_file)
 	
-	local elogdir=/tmp/EXT_${port}
+	local elogdir=/tmp/EXT_SCANNER${port}
 	local n=0
 	local code=""
 	local uids=""
@@ -648,19 +648,23 @@ split1 () {
 			_debug "filename is $filename."
 
                     	dir1="${scanner_audio}/${yymmdd}/${group}/${channel}/${hh}"
-                        test "X$group" == "X" && dir1="${scanner_audio}/${yymmdd}/FOUNDTGIDS/${freq}/${hh}"
+                       	dir2="${scanner_audio}/${yymmdd}/LOG" 
+			test "X$group" == "X" && dir1="${scanner_audio}/${yymmdd}/FOUNDTGIDS/${freq}/${hh}"
 			_debug "dir1 is $dir1."
+			_debug "dir2 is $dir2."
                 	dir1=$(echo "$dir1" | sed -e 's/\://')
                 	test -d "$dir1" || mkdir -p "$dir1"
 
                 	[ -s "$elogdir/$st" ] || sleep 3s
-                	if [ -s "$elogdir/$st" ]; then
+                	_debug "collecting uids from $elogdir/$st"
+			if [ -s "$elogdir/$st" ]; then
                     		cut -d, -f 7,9 "$elogdir/$st" | grep UID > "$elogdir/$st".1
 uids=$(cat "$elogdir/$st".1 | clrsym.sed | tr ' ' '\n' | sed -e '/^$/d' | sed -e "/\b$freq\b/d" | uniq | tr '\n' '_' | sed -e 's/_$//g')
                     		_debug "extracting uids $uids. File $elogdir/$st, size $(stat -c %s $elogdir/$st)."
                 	fi
                		[ -e "$elogdir/$st".1 ] && rm "$elogdir/$st".1
                		[ "X$uids" != "X" ] && filename="${filename}_${uids}"
+			[ "X$uids" != "X" ] && echo ${uids} >> $dir2/${freq}.log			
 			_debug "filename is $filename."
                		uids=""
           	fi
@@ -737,6 +741,10 @@ split2 () {
 	for i in $(seq 1 $nl); do
 
         	let j=i+1
+
+                sql=$(sed -n "${i}p" $log_dir/$log_file1 | cut -d" " -f1)
+                sql=${sql:3:3}
+                test "$sql" == "000"  && continue
 
 	        chan_i=$(sed -n "${i}p" $log_dir/$log_file1 | awk '{printf $2}')
         	chan_j=$(sed -n "${j}p"  $log_dir/$log_file1 | awk '{printf $2}')
@@ -994,7 +1002,7 @@ record () {
                 		
 				test -f "/proc/$(cat $apf)/exe" && kill -9 $(cat $apf)
                 		test -f "/proc/$(cat $lpf)/exe" && kill $(cat $lpf)
-				test -e $elogdir && rm -r $elogdir
+				#test -e $elogdir && rm -r $elogdir
 			fi
 			;;	
 	esac
