@@ -743,23 +743,23 @@ split2 () {
         	let j=i+1
 
                 sql=$(sed -n "${i}p" $log_dir/$log_file1 | cut -d" " -f1)
-                sql=${sql:3:3}
-                test "$sql" == "000"  && continue
+                sql=${sql:0:2}
+                test "$sql" == "LC"  && continue
 
-	        chan_i=$(sed -n "${i}p" $log_dir/$log_file1 | awk '{printf $2}')
-        	chan_j=$(sed -n "${j}p"  $log_dir/$log_file1 | awk '{printf $2}')
+	        chan_i=$(sed -n "${i}p" $log_dir/$log_file1 | awk '{printf $6}')
+        	chan_j=$(sed -n "${j}p"  $log_dir/$log_file1 | awk '{printf $6}')
 
-	        t1_i=$(sed -n "${i}p" $log_dir/$log_file1 | awk '{printf $5}')
-        	t1_j=$(sed -n "${j}p" $log_dir/$log_file1 | awk '{printf $5}')
+	        t1_i=$(sed -n "${i}p" $log_dir/$log_file1 | awk '{printf $9}')
+        	t1_j=$(sed -n "${j}p" $log_dir/$log_file1 | awk '{printf $9}')
 
-	        t2_i=$(sed -n "${i}p" $log_dir/$log_file1 | awk '{printf $8}')
-        	t2_j=$(sed -n "${j}p" $log_dir/$log_file1 | awk '{printf $8}')
+	        t2_i=$(sed -n "${i}p" $log_dir/$log_file1 | awk '{printf $11}')
+        	t2_j=$(sed -n "${j}p" $log_dir/$log_file1 | awk '{printf $11}')
 
         	test "X$chan" == "X" && chan=$chan_i
 	        test "X$t1" == "X" && t1=$t1_i
 		test "X$sql" == "X" && sql=$(sed -n "${i}p" $log_dir/$log_file1 | awk '{printf $1}')
-		test "X$freq" == "X" && freq=$(sed -n "${i}p" $log_dir/$log_file1 | awk '{printf $3}')
-		test "X$st0" == "X" && st0=$(sed -n "${i}p" $log_dir/$log_file1 | awk '{printf $4}')
+		test "X$freq" == "X" && freq=$(sed -n "${i}p" $log_dir/$log_file1 | awk '{printf $7}')
+		test "X$st0" == "X" && st0=$(sed -n "${i}p" $log_dir/$log_file1 | awk '{printf $8}')
 
         	if [ "$chan_i" == "$chan_j" ]; then
                 	diff=$(echo "($t1_j-$t2_i)*1000" | bc | cut -d. -f1)
@@ -915,8 +915,8 @@ update () {
         	        		curline=$(tail -1 $slog | awk -F, '{print $6" "$7" "$8" "$2}' | sed -e 's/ /+/g')
 				;;
 				2)
-			                local channel=$(tail -1 $slog | cut -d" " -f 2)
-				        local freq=$(tail -1 $slog | cut -d" " -f 3)
+			                local channel=$(tail -1 $slog | cut -d" " -f 6)
+				        local freq=$(tail -1 $slog | cut -d" " -f 7)
 			                local mode=${channel:0:2}
 					
 					_debug "slog $slog"	
