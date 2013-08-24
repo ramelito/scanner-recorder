@@ -487,18 +487,18 @@ split0 () {
 	_debug "dcshift value for $rec_file1.wav is $dcshift"
 	_debug "inverting value."
 	dcshift=$(echo "scale=2;$dcshift*(-1)" | bc)
-	_debug "soxing to intermediate file $rec_dir/${rec_file1}_dc0.wav"
-	sox $rec_dir/$rec_file1.wav $rec_dir/${rec_file1}_dc0.wav dcshift $dcshift
-	_debug "moving $rec_dir/${rec_file1}_dc0.wav to $rec_dir/$rec_file1.wav"
-	mv $rec_dir/${rec_file1}_dc0.wav $rec_dir/$rec_file1.wav
+	_debug "soxing to intermediate file $rec_dir/dc0_${rec_file1}"
+	sox $rec_dir/$rec_file1.wav $rec_dir/dc0_${rec_file1} dcshift $dcshift
+	_debug "moving $rec_dir/dc0_${rec_file1} to $rec_dir/$rec_file1.wav"
+	mv $rec_dir/dc0_${rec_file1} $rec_dir/$rec_file1
 
 	_info "starting sox to split file."
-	_debug "sox $rec_dir/$rec_file1.wav $tmp_dir/${opent}_.wav silence 1 0.5 ${th}d 1 0.5 ${th}d ..."
-	sox $rec_dir/$rec_file1.wav $tmp_dir/${opent}_.wav silence 1 0.5 ${th}d 1 1.5 ${th}d : newfile : restart
+	_debug "sox $rec_dir/$rec_file1 $tmp_dir/${opent}_.wav silence 1 0.5 ${th}d 1 0.5 ${th}d ..."
+	sox $rec_dir/$rec_file1 $tmp_dir/${opent}_.wav silence 1 0.5 ${th}d 1 1.5 ${th}d : newfile : restart
 
 	if [ "$format" != "wav" ]; then
-		sox $rec_dir/$rec_file1.wav $rec_dir/$rec_file1.$format
-		test -f $rec_dir/$rec_file1.$format && rm $rec_dir/$rec_file1.wav
+		sox $rec_dir/$rec_file1 $rec_dir/$rec_file1.$format
+		test -f $rec_dir/$rec_file1.$format && rm $rec_dir/$rec_file1
 	fi
 
         local num=$(ls $tmp_dir | grep ${opent} | wc -l)
@@ -509,7 +509,7 @@ split0 () {
 		
 		_info "$num files created."
 
-                hexdump -v -e '"%_ad "' -e '8192/1 "%01x" "\n"' $rec_dir/$rec_file1.wav > $tmp_dir/${rec_file1}.hex
+                hexdump -v -e '"%_ad "' -e '8192/1 "%01x" "\n"' $rec_dir/$rec_file1 > $tmp_dir/${rec_file1}.hex
         fi
 
 	for outwav in $(find $tmp_dir -type f | grep ${opent}); do
@@ -587,10 +587,10 @@ split1 () {
 	_debug "dcshift value for $rec_file1 is $dcshift"
 	_debug "inverting value."
 	dcshift=$(echo "scale=2;$dcshift*(-1)" | bc)
-	_debug "soxing to intermediate file $rec_dir/dc0_${rec_file1}.wav"
-	sox $rec_dir/$rec_file1 $rec_dir/dc0_${rec_file1}.wav dcshift $dcshift
-	_debug "moving $rec_dir/dc0_${rec_file1}.wav to $rec_dir/$rec_file1"
-	mv $rec_dir/dc0_${rec_file1}.wav $rec_dir/$rec_file1
+	_debug "soxing to intermediate file $rec_dir/dc0_${rec_file1}"
+	sox $rec_dir/$rec_file1 $rec_dir/dc0_${rec_file1} dcshift $dcshift
+	_debug "moving $rec_dir/dc0_${rec_file1} to $rec_dir/$rec_file1"
+	mv $rec_dir/dc0_${rec_file1} $rec_dir/$rec_file1
 
 	_debug "loading $log_dir/$log_file1"
 
@@ -1405,6 +1405,8 @@ clean () {
 modem_up () {
 
 	_notify "establishing mobile connection."
+
+	[ $(expr $mport % 10) -eq 0 ] || exit 1
 
 	case "$misp" in
 
